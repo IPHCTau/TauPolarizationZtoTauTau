@@ -1,0 +1,71 @@
+[submodule "modules/columnflow"]
+	path = modules/columnflow
+	url = git@github.com:columnflow/columnflow.git
+	branch = master
+[submodule "modules/cmsdb"]
+	path = modules/cmsdb
+	url = git@github.com:uhh-cms/cmsdb.git
+	branch = master
+[submodule "zttpol/data/corrections/JME/Run3_2022_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/JME/Run3_2022_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/JME/Run3-22CDSep23-Summer22-NanoAODv12.git
+[submodule "zttpol/data/corrections/JME/Run3_2022EE_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/JME/Run3_2022EE_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12.git
+[submodule "zttpol/data/corrections/JME/Run3_2023_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/JME/Run3_2023_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/JME/Run3-23CSep23-Summer23-NanoAODv12.git
+[submodule "zttpol/data/corrections/JME/Run3_2023BPix_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/JME/Run3_2023BPix_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/JME/Run3-23DSep23-Summer23BPix-NanoAODv12.git
+[submodule "zttpol/data/corrections/EGM/Run3_2022_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/EGM/Run3_2022_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/EGM/Run3-22CDSep23-Summer22-NanoAODv12.git
+[submodule "zttpol/data/corrections/EGM/Run3_2022EE_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/EGM/Run3_2022EE_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/EGM/Run3-22EFGSep23-Summer22EE-NanoAODv12.git
+[submodule "zttpol/data/corrections/EGM/Run3_2023_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/EGM/Run3_2023_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/EGM/Run3-23CSep23-Summer23-NanoAODv12.git
+[submodule "zttpol/data/corrections/EGM/Run3_2023BPix_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/EGM/Run3_2023BPix_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/EGM/Run3-23DSep23-Summer23BPix-NanoAODv12.git
+[submodule "zttpol/data/corrections/LUM/Run3_2022_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/LUM/Run3_2022_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/LUM/Run3-22CDSep23-Summer22-NanoAODv12.git
+[submodule "zttpol/data/corrections/LUM/Run3_2022EE_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/LUM/Run3_2022EE_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/LUM/Run3-22EFGSep23-Summer22EE-NanoAODv12.git
+[submodule "zttpol/data/corrections/LUM/Run3_2023_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/LUM/Run3_2023_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/LUM/Run3-23CSep23-Summer23-NanoAODv12.git
+[submodule "zttpol/data/corrections/LUM/Run3_2023BPix_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/LUM/Run3_2023BPix_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/LUM/Run3-23DSep23-Summer23BPix-NanoAODv12.git
+[submodule "zttpol/data/corrections/MUO/Run3_2022_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/MUO/Run3_2022_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/MUO/Run3-22CDSep23-Summer22-NanoAODv12.git
+[submodule "zttpol/data/corrections/MUO/Run3_2022EE_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/MUO/Run3_2022EE_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/MUO/Run3-22EFGSep23-Summer22EE-NanoAODv12.git
+[submodule "zttpol/data/corrections/MUO/Run3_2023PreBPix_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/MUO/Run3_2023_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/MUO/Run3-23CSep23-Summer23-NanoAODv12.git
+[submodule "zttpol/data/corrections/MUO/Run3_2023PostBPix_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/MUO/Run3_2023BPix_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/MUO/Run3-23DSep23-Summer23BPix-NanoAODv12.git
+[submodule "zttpol/data/corrections/TAU/Run3_2022_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/TAU/Run3_2022_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/TAU/run3-22cdsep23-summer22-nanoaodv12.git
+[submodule "zttpol/data/corrections/TAU/Run3_2022EE_Summer22_NanoAODv12"]
+	path = zttpol/data/corrections/TAU/Run3_2022EE_Summer22_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/TAU/run3-22efgsep23-summer22ee-nanoaodv12.git
+[submodule "zttpol/data/corrections/TAU/Run3_2023_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/TAU/Run3_2023_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/TAU/Run3-23CSep23-Summer23-NanoAODv12.git
+[submodule "zttpol/data/corrections/TAU/Run3_2023BPix_Summer23_NanoAODv12"]
+	path = zttpol/data/corrections/TAU/Run3_2023BPix_Summer23_NanoAODv12
+	url = https://gitlab.cern.ch/cms-analysis-corrections/TAU/run3-23dsep23-summer23bpix-nanoaodv12.git
+[submodule "zttpol/data/tools/MuonScaReKIT"]
+	path = zttpol/data/tools/MuonScaReKIT
+	url = https://gitlab.cern.ch/cms-muonPOG/muonscarekit.git

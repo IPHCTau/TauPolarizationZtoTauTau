@@ -1,0 +1,584 @@
+{
+    "schema_version": 2,
+    "description": "Closure corrections for the httcp analysis",
+    "corrections": [
+        {
+            "name": "closure_corrections_fit",
+            "description": "Fit closure corrections for all decay modes and jet categories",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "met_var_qcd_h1",
+                    "type": "real",
+                    "description": "Transverse momentum of the tau"
+                },
+                {
+                    "name": "dm",
+                    "type": "int",
+                    "description": "Reconstructed tau decay mode of leading tau: pi_1, rho_1, a1dm11_1, a1dm10_1, a1dm2_1"
+                },
+                {
+                    "name": "njets",
+                    "type": "int",
+                    "description": "Number of jets in the event (has_0j, has_1j, has_2j)"
+                },
+                {
+                    "name": "syst",
+                    "type": "string",
+                    "description": "Systematic variations: 'nom', 'up', 'down'"
+                }
+            ],
+            "output": {
+                "name": "closure_correction",
+                "type": "real",
+                "description": "Closure correction to apply to data-MC"
+            },
+            "data": {
+                "nodetype": "category",
+                "input": "dm",
+                "content": [
+                    {
+                        "key": 10,
+                        "value": {
+                            "nodetype": "category",
+                            "input": "njets",
+                            "content": [
+                                {
+                                    "key": 0,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.12993+0.0498251*min(max(x,-1.5),0.9457524392857428)+-0.11156*min(max(x,-1.5),0.9457524392857428)*min(max(x,-1.5),0.9457524392857428)+-0.0913402*pow(min(max(x,-1.5),0.9457524392857428),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.12993+0.0498251*min(max(x,-1.5),0.9457524392857428)+-0.11156*min(max(x,-1.5),0.9457524392857428)*min(max(x,-1.5),0.9457524392857428)+-0.0913402*pow(min(max(x,-1.5),0.9457524392857428),3))+sqrt(5.8638e-05+0.00013157*min(max(x,-1.5),0.9457524392857428)+0.000119979*min(max(x,-1.5),0.9457524392857428)*min(max(x,-1.5),0.9457524392857428)+0.000130778*pow(min(max(x,-1.5),0.9457524392857428),3)+0.00202335*pow(min(max(x,-1.5),0.9457524392857428),4)+0.0037238*pow(min(max(x,-1.5),0.9457524392857428),5)+0.00202421*pow(min(max(x,-1.5),0.9457524392857428),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.12993+0.0498251*min(max(x,-1.5),0.9457524392857428)+-0.11156*min(max(x,-1.5),0.9457524392857428)*min(max(x,-1.5),0.9457524392857428)+-0.0913402*pow(min(max(x,-1.5),0.9457524392857428),3))-sqrt(5.8638e-05+0.00013157*min(max(x,-1.5),0.9457524392857428)+0.000119979*min(max(x,-1.5),0.9457524392857428)*min(max(x,-1.5),0.9457524392857428)+0.000130778*pow(min(max(x,-1.5),0.9457524392857428),3)+0.00202335*pow(min(max(x,-1.5),0.9457524392857428),4)+0.0037238*pow(min(max(x,-1.5),0.9457524392857428),5)+0.00202421*pow(min(max(x,-1.5),0.9457524392857428),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": 1,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0989014+0.0649684*min(max(x,-1.5),1.5)+-0.0189666*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.0367809*pow(min(max(x,-1.5),1.5),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0989014+0.0649684*min(max(x,-1.5),1.5)+-0.0189666*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.0367809*pow(min(max(x,-1.5),1.5),3))+sqrt(6.03324e-05+0.000143661*min(max(x,-1.5),1.5)+0.000286533*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.000268392*pow(min(max(x,-1.5),1.5),3)+5.30184e-05*pow(min(max(x,-1.5),1.5),4)+0.00186746*pow(min(max(x,-1.5),1.5),5)+0.00166154*pow(min(max(x,-1.5),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0989014+0.0649684*min(max(x,-1.5),1.5)+-0.0189666*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.0367809*pow(min(max(x,-1.5),1.5),3))-sqrt(6.03324e-05+0.000143661*min(max(x,-1.5),1.5)+0.000286533*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.000268392*pow(min(max(x,-1.5),1.5),3)+5.30184e-05*pow(min(max(x,-1.5),1.5),4)+0.00186746*pow(min(max(x,-1.5),1.5),5)+0.00166154*pow(min(max(x,-1.5),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": 2,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0687166+-0.0447805*min(max(x,-1.2521664993362618),-1.2521664993362618)+-0.0855931*min(max(x,-1.2521664993362618),-1.2521664993362618)*min(max(x,-1.2521664993362618),-1.2521664993362618)+-0.00479499*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0687166+-0.0447807*min(max(x,-1.2521664993362618),-1.2521664993362618)+-0.0855932*min(max(x,-1.2521664993362618),-1.2521664993362618)*min(max(x,-1.2521664993362618),-1.2521664993362618)+-0.00479497*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),3))+sqrt(5.4356e-05+8.58454e-05*min(max(x,-1.2521664993362618),-1.2521664993362618)+4.36517e-05*min(max(x,-1.2521664993362618),-1.2521664993362618)*min(max(x,-1.2521664993362618),-1.2521664993362618)+-0.000781312*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),3)+-0.000353547*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),4)+0.000952544*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),5)+0.000584294*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0687166+-0.0447807*min(max(x,-1.2521664993362618),-1.2521664993362618)+-0.0855932*min(max(x,-1.2521664993362618),-1.2521664993362618)*min(max(x,-1.2521664993362618),-1.2521664993362618)+-0.00479497*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),3))-sqrt(5.4356e-05+8.58454e-05*min(max(x,-1.2521664993362618),-1.2521664993362618)+4.36517e-05*min(max(x,-1.2521664993362618),-1.2521664993362618)*min(max(x,-1.2521664993362618),-1.2521664993362618)+-0.000781312*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),3)+-0.000353547*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),4)+0.000952544*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),5)+0.000584294*pow(min(max(x,-1.2521664993362618),-1.2521664993362618),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "key": 2,
+                        "value": {
+                            "nodetype": "category",
+                            "input": "njets",
+                            "content": [
+                                {
+                                    "key": 0,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0967142+0.0618309*min(max(x,-1.5),1.5)+-0.0221581*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.033465*pow(min(max(x,-1.5),1.5),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0967142+0.0618309*min(max(x,-1.5),1.5)+-0.0221581*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.033465*pow(min(max(x,-1.5),1.5),3))+sqrt(3.47971e-05+6.6993e-05*min(max(x,-1.5),1.5)+0.000389664*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+0.000207742*pow(min(max(x,-1.5),1.5),3)+-0.000818877*pow(min(max(x,-1.5),1.5),4)+-0.00017615*pow(min(max(x,-1.5),1.5),5)+0.00147548*pow(min(max(x,-1.5),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0967142+0.0618309*min(max(x,-1.5),1.5)+-0.0221581*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.033465*pow(min(max(x,-1.5),1.5),3))-sqrt(3.47971e-05+6.6993e-05*min(max(x,-1.5),1.5)+0.000389664*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+0.000207742*pow(min(max(x,-1.5),1.5),3)+-0.000818877*pow(min(max(x,-1.5),1.5),4)+-0.00017615*pow(min(max(x,-1.5),1.5),5)+0.00147548*pow(min(max(x,-1.5),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": 1,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0836883+0.0653572*min(max(x,-1.5),1.5)+0.0021543*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.0295627*pow(min(max(x,-1.5),1.5),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0836883+0.0653572*min(max(x,-1.5),1.5)+0.0021543*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.0295627*pow(min(max(x,-1.5),1.5),3))+sqrt(5.4199e-05+7.95892e-05*min(max(x,-1.5),1.5)+0.000409838*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+3.06433e-05*pow(min(max(x,-1.5),1.5),3)+-0.00100466*pow(min(max(x,-1.5),1.5),4)+0.000421993*pow(min(max(x,-1.5),1.5),5)+0.00209361*pow(min(max(x,-1.5),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0836883+0.0653572*min(max(x,-1.5),1.5)+0.0021543*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.0295627*pow(min(max(x,-1.5),1.5),3))-sqrt(5.4199e-05+7.95892e-05*min(max(x,-1.5),1.5)+0.000409838*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+3.06433e-05*pow(min(max(x,-1.5),1.5),3)+-0.00100466*pow(min(max(x,-1.5),1.5),4)+0.000421993*pow(min(max(x,-1.5),1.5),5)+0.00209361*pow(min(max(x,-1.5),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": 2,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0620831+0.0334788*min(max(x,-1.5),1.5)+-0.00429667*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.000121719*pow(min(max(x,-1.5),1.5),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0620831+0.0334788*min(max(x,-1.5),1.5)+-0.00429667*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.000121719*pow(min(max(x,-1.5),1.5),3))+sqrt(5.13711e-05+2.44012e-05*min(max(x,-1.5),1.5)+0.00031388*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+0.00030068*pow(min(max(x,-1.5),1.5),3)+-0.000738964*pow(min(max(x,-1.5),1.5),4)+-0.000450799*pow(min(max(x,-1.5),1.5),5)+0.00129058*pow(min(max(x,-1.5),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0620831+0.0334788*min(max(x,-1.5),1.5)+-0.00429667*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+-0.000121719*pow(min(max(x,-1.5),1.5),3))-sqrt(5.13711e-05+2.44012e-05*min(max(x,-1.5),1.5)+0.00031388*min(max(x,-1.5),1.5)*min(max(x,-1.5),1.5)+0.00030068*pow(min(max(x,-1.5),1.5),3)+-0.000738964*pow(min(max(x,-1.5),1.5),4)+-0.000450799*pow(min(max(x,-1.5),1.5),5)+0.00129058*pow(min(max(x,-1.5),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "key": 0,
+                        "value": {
+                            "nodetype": "category",
+                            "input": "njets",
+                            "content": [
+                                {
+                                    "key": 0,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.298495+0.188857*min(max(x,-1.5),0.9978233657556437)+-0.251388*min(max(x,-1.5),0.9978233657556437)*min(max(x,-1.5),0.9978233657556437)+-0.238198*pow(min(max(x,-1.5),0.9978233657556437),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.298495+0.188857*min(max(x,-1.5),0.9978233657556437)+-0.251388*min(max(x,-1.5),0.9978233657556437)*min(max(x,-1.5),0.9978233657556437)+-0.238198*pow(min(max(x,-1.5),0.9978233657556437),3))+sqrt(0.000594203+0.00115688*min(max(x,-1.5),0.9978233657556437)+0.00100548*min(max(x,-1.5),0.9978233657556437)*min(max(x,-1.5),0.9978233657556437)+0.00521672*pow(min(max(x,-1.5),0.9978233657556437),3)+0.0228545*pow(min(max(x,-1.5),0.9978233657556437),4)+0.0298486*pow(min(max(x,-1.5),0.9978233657556437),5)+0.013198*pow(min(max(x,-1.5),0.9978233657556437),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.298495+0.188857*min(max(x,-1.5),0.9978233657556437)+-0.251388*min(max(x,-1.5),0.9978233657556437)*min(max(x,-1.5),0.9978233657556437)+-0.238198*pow(min(max(x,-1.5),0.9978233657556437),3))-sqrt(0.000594203+0.00115688*min(max(x,-1.5),0.9978233657556437)+0.00100548*min(max(x,-1.5),0.9978233657556437)*min(max(x,-1.5),0.9978233657556437)+0.00521672*pow(min(max(x,-1.5),0.9978233657556437),3)+0.0228545*pow(min(max(x,-1.5),0.9978233657556437),4)+0.0298486*pow(min(max(x,-1.5),0.9978233657556437),5)+0.013198*pow(min(max(x,-1.5),0.9978233657556437),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": 1,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.179466+-0.0507746*min(max(x,-1.4502458540237817),1.5)+0.0301522*min(max(x,-1.4502458540237817),1.5)*min(max(x,-1.4502458540237817),1.5)+0.10377*pow(min(max(x,-1.4502458540237817),1.5),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.179466+-0.0507746*min(max(x,-1.4502458540237817),1.5)+0.0301522*min(max(x,-1.4502458540237817),1.5)*min(max(x,-1.4502458540237817),1.5)+0.10377*pow(min(max(x,-1.4502458540237817),1.5),3))+sqrt(0.000539577+0.00057902*min(max(x,-1.4502458540237817),1.5)+0.000922766*min(max(x,-1.4502458540237817),1.5)*min(max(x,-1.4502458540237817),1.5)+-0.00354285*pow(min(max(x,-1.4502458540237817),1.5),3)+0.00794349*pow(min(max(x,-1.4502458540237817),1.5),4)+0.0274686*pow(min(max(x,-1.4502458540237817),1.5),5)+0.0176195*pow(min(max(x,-1.4502458540237817),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.179466+-0.0507746*min(max(x,-1.4502458540237817),1.5)+0.0301522*min(max(x,-1.4502458540237817),1.5)*min(max(x,-1.4502458540237817),1.5)+0.10377*pow(min(max(x,-1.4502458540237817),1.5),3))-sqrt(0.000539577+0.00057902*min(max(x,-1.4502458540237817),1.5)+0.000922766*min(max(x,-1.4502458540237817),1.5)*min(max(x,-1.4502458540237817),1.5)+-0.00354285*pow(min(max(x,-1.4502458540237817),1.5),3)+0.00794349*pow(min(max(x,-1.4502458540237817),1.5),4)+0.0274686*pow(min(max(x,-1.4502458540237817),1.5),5)+0.0176195*pow(min(max(x,-1.4502458540237817),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": 2,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.134359+0.010028*min(max(x,-1.32130569629273),1.5)+0.0221869*min(max(x,-1.32130569629273),1.5)*min(max(x,-1.32130569629273),1.5)+0.0692924*pow(min(max(x,-1.32130569629273),1.5),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.134359+0.010028*min(max(x,-1.32130569629273),1.5)+0.0221869*min(max(x,-1.32130569629273),1.5)*min(max(x,-1.32130569629273),1.5)+0.0692924*pow(min(max(x,-1.32130569629273),1.5),3))+sqrt(0.000420343+0.000582928*min(max(x,-1.32130569629273),1.5)+0.00374424*min(max(x,-1.32130569629273),1.5)*min(max(x,-1.32130569629273),1.5)+0.000443966*pow(min(max(x,-1.32130569629273),1.5),3)+-0.00849566*pow(min(max(x,-1.32130569629273),1.5),4)+0.00376266*pow(min(max(x,-1.32130569629273),1.5),5)+0.0147623*pow(min(max(x,-1.32130569629273),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.134359+0.010028*min(max(x,-1.32130569629273),1.5)+0.0221869*min(max(x,-1.32130569629273),1.5)*min(max(x,-1.32130569629273),1.5)+0.0692924*pow(min(max(x,-1.32130569629273),1.5),3))-sqrt(0.000420343+0.000582928*min(max(x,-1.32130569629273),1.5)+0.00374424*min(max(x,-1.32130569629273),1.5)*min(max(x,-1.32130569629273),1.5)+0.000443966*pow(min(max(x,-1.32130569629273),1.5),3)+-0.00849566*pow(min(max(x,-1.32130569629273),1.5),4)+0.00376266*pow(min(max(x,-1.32130569629273),1.5),5)+0.0147623*pow(min(max(x,-1.32130569629273),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "key": 1,
+                        "value": {
+                            "nodetype": "category",
+                            "input": "njets",
+                            "content": [
+                                {
+                                    "key": 0,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.142326+0.0457977*min(max(x,-1.5),1.3093638672632106)+-0.0641714*min(max(x,-1.5),1.3093638672632106)*min(max(x,-1.5),1.3093638672632106)+-0.0411053*pow(min(max(x,-1.5),1.3093638672632106),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.142326+0.0457977*min(max(x,-1.5),1.3093638672632106)+-0.0641714*min(max(x,-1.5),1.3093638672632106)*min(max(x,-1.5),1.3093638672632106)+-0.0411053*pow(min(max(x,-1.5),1.3093638672632106),3))+sqrt(4.32404e-05+9.90518e-05*min(max(x,-1.5),1.3093638672632106)+0.000126714*min(max(x,-1.5),1.3093638672632106)*min(max(x,-1.5),1.3093638672632106)+-0.000250326*pow(min(max(x,-1.5),1.3093638672632106),3)+0.00046429*pow(min(max(x,-1.5),1.3093638672632106),4)+0.00173695*pow(min(max(x,-1.5),1.3093638672632106),5)+0.00112533*pow(min(max(x,-1.5),1.3093638672632106),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.142326+0.0457977*min(max(x,-1.5),1.3093638672632106)+-0.0641714*min(max(x,-1.5),1.3093638672632106)*min(max(x,-1.5),1.3093638672632106)+-0.0411053*pow(min(max(x,-1.5),1.3093638672632106),3))-sqrt(4.32404e-05+9.90518e-05*min(max(x,-1.5),1.3093638672632106)+0.000126714*min(max(x,-1.5),1.3093638672632106)*min(max(x,-1.5),1.3093638672632106)+-0.000250326*pow(min(max(x,-1.5),1.3093638672632106),3)+0.00046429*pow(min(max(x,-1.5),1.3093638672632106),4)+0.00173695*pow(min(max(x,-1.5),1.3093638672632106),5)+0.00112533*pow(min(max(x,-1.5),1.3093638672632106),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": 1,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.110576+0.00437474*min(max(x,-1.3532936119053078),1.5)+-0.0260299*min(max(x,-1.3532936119053078),1.5)*min(max(x,-1.3532936119053078),1.5)+0.0229921*pow(min(max(x,-1.3532936119053078),1.5),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.110576+0.00437474*min(max(x,-1.3532936119053078),1.5)+-0.0260299*min(max(x,-1.3532936119053078),1.5)*min(max(x,-1.3532936119053078),1.5)+0.0229921*pow(min(max(x,-1.3532936119053078),1.5),3))+sqrt(4.26277e-05+7.58514e-05*min(max(x,-1.3532936119053078),1.5)+0.00015614*min(max(x,-1.3532936119053078),1.5)*min(max(x,-1.3532936119053078),1.5)+-0.000302307*pow(min(max(x,-1.3532936119053078),1.5),3)+-3.00182e-05*pow(min(max(x,-1.3532936119053078),1.5),4)+0.000648693*pow(min(max(x,-1.3532936119053078),1.5),5)+0.000337035*pow(min(max(x,-1.3532936119053078),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.110576+0.00437474*min(max(x,-1.3532936119053078),1.5)+-0.0260299*min(max(x,-1.3532936119053078),1.5)*min(max(x,-1.3532936119053078),1.5)+0.0229921*pow(min(max(x,-1.3532936119053078),1.5),3))-sqrt(4.26277e-05+7.58514e-05*min(max(x,-1.3532936119053078),1.5)+0.00015614*min(max(x,-1.3532936119053078),1.5)*min(max(x,-1.3532936119053078),1.5)+-0.000302307*pow(min(max(x,-1.3532936119053078),1.5),3)+-3.00182e-05*pow(min(max(x,-1.3532936119053078),1.5),4)+0.000648693*pow(min(max(x,-1.3532936119053078),1.5),5)+0.000337035*pow(min(max(x,-1.3532936119053078),1.5),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "key": 2,
+                                    "value": {
+                                        "nodetype": "category",
+                                        "input": "syst",
+                                        "content": [
+                                            {
+                                                "key": "nom",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0817822+-0.0254014*min(max(x,-1.4206227202530526),-1.4206227202530526)+-0.0400704*min(max(x,-1.4206227202530526),-1.4206227202530526)*min(max(x,-1.4206227202530526),-1.4206227202530526)+0.0129049*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),3))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "up",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0817822+-0.0254014*min(max(x,-1.4206227202530526),-1.4206227202530526)+-0.0400704*min(max(x,-1.4206227202530526),-1.4206227202530526)*min(max(x,-1.4206227202530526),-1.4206227202530526)+0.0129049*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),3))+sqrt(3.97291e-05+-6.77158e-06*min(max(x,-1.4206227202530526),-1.4206227202530526)+-7.91029e-06*min(max(x,-1.4206227202530526),-1.4206227202530526)*min(max(x,-1.4206227202530526),-1.4206227202530526)+4.80206e-05*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),3)+9.9648e-05*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),4)+-0.000224854*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),5)+9.04967e-05*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "key": "down",
+                                                "value": {
+                                                    "nodetype": "formula",
+                                                    "expression": "(0.0817822+-0.0254014*min(max(x,-1.4206227202530526),-1.4206227202530526)+-0.0400704*min(max(x,-1.4206227202530526),-1.4206227202530526)*min(max(x,-1.4206227202530526),-1.4206227202530526)+0.0129049*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),3))-sqrt(3.97291e-05+-6.77158e-06*min(max(x,-1.4206227202530526),-1.4206227202530526)+-7.91029e-06*min(max(x,-1.4206227202530526),-1.4206227202530526)*min(max(x,-1.4206227202530526),-1.4206227202530526)+4.80206e-05*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),3)+9.9648e-05*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),4)+-0.000224854*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),5)+9.04967e-05*pow(min(max(x,-1.4206227202530526),-1.4206227202530526),6))",
+                                                    "parser": "TFormula",
+                                                    "variables": [
+                                                        "met_var_qcd_h1"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
