@@ -1,15 +1,18 @@
+import law
+
 import functools
 
 from columnflow.production import Producer, producer
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.production.cms.muon import muon_weights
+#from columnflow.production.cms.muon import muon_weights
 
-from columnflow.util import maybe_import, safe_div, InsertableDict
+from columnflow.util import maybe_import, safe_div
 
 from columnflow.columnar_util import set_ak_column, EMPTY_FLOAT, Route, flat_np_view, layout_ak_array
 from columnflow.columnar_util import optional_column as optional
 
-from httcp.util import get_trigger_id_map
+from zttpol.production.muon_weights_cf import muon_weights
+from zttpol.util import get_trigger_id_map
 
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
@@ -57,7 +60,8 @@ muon_IsoMu24_trigger_weights = muon_weights.derive(
 
 @producer(
     uses={
-        "single_mu_triggered",
+        "Muon.{pt,eta,phi,mass}",
+        "single_triggered",
         #"trigger_ids",
         muon_IsoMu24_trigger_weights,
     },
@@ -76,10 +80,10 @@ def muon_trigger_weights(self: Producer,
     
     # compute muon trigger SF weights (NOTE: trigger SFs are only defined for muons with
     # pt > 26 GeV, so create a copy of the events array with with all muon pt < 26 GeV set to 26 GeV)
-    trigger_sf_events = set_ak_column_f32(events, "Muon.pt", ak.where(events.Muon.pt > 26., events.Muon.pt, 26.))
+    trigger_sf_events = set_ak_column_f32(events, "Muon.pt", ak.where(events.Muon.pt >= 26., events.Muon.pt, 26.))
     trigger_sf_events = self[muon_IsoMu24_trigger_weights](trigger_sf_events, **kwargs)
     for route in self[muon_IsoMu24_trigger_weights].produced_columns:
-        events = set_ak_column_f32(events, route, ak.where(events.single_mu_triggered,  #events.trigger_ids == trigger_id,
+        events = set_ak_column_f32(events, route, ak.where(events.single_triggered,  #events.trigger_ids == trigger_id,
                                                            route.apply(trigger_sf_events),
                                                            1.0))
     # memory cleanup
@@ -96,8 +100,8 @@ def muon_trigger_weights(self: Producer,
 
 @producer(
     uses={
-        "Muon.pt", "Muon.eta",
-        "single_mu_triggered","cross_mu_triggered",
+        "Muon.{pt,eta,phi,mass}",
+        "single_triggered","cross_triggered",
     },
     produces={
         *[f"muon_xtrig_weight{tag}" for tag in ["", "_up", "_down"]],
@@ -126,7 +130,7 @@ def muon_xtrigger_weights(self: Producer,
     sf_nom = np.ones_like(pt, dtype=np.float32)
     args = lambda mask, syst : (abseta[mask], pt[mask], syst)
 
-    xtrig_mask = events.cross_mu_triggered & ~events.single_mu_triggered & (events.Muon.pt < 25) & (np.abs(events.Muon.eta) <= 2.1)
+    xtrig_mask = events.cross_triggered & ~events.single_triggered & (events.Muon.pt < 25) & (np.abs(events.Muon.eta) <= 2.1)
     xtrig_mask = flat_np_view(xtrig_mask)
     
     for syst, postfix in [
@@ -144,20 +148,25 @@ def muon_xtrigger_weights(self: Producer,
 
     return events
 
+
 @muon_xtrigger_weights.requires
-def muon_xtrigger_weights_requires(self: Producer, reqs: dict) -> None:
+def muon_xtrigger_weights_requires(self: Producer,
+                                   task: law.Task,
+                                   reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
+    
 @muon_xtrigger_weights.setup
 def muon_xtrigger_weights_setup(
-    self: Producer,
-    reqs: dict,
-    inputs: dict,
-    reader_targets: InsertableDict,
+        self: Producer,
+        task: law.Task,
+        reqs: dict,
+        inputs: dict,
+        reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib

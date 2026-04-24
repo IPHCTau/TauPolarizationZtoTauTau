@@ -11,7 +11,7 @@ import functools
 
 from columnflow.calibration import Calibrator, calibrator
 from columnflow.calibration.cms.egamma import electron_scale_smear
-from columnflow.calibration.cms.tau import tec
+#from columnflow.calibration.cms.tau import tec
 
 from columnflow.production.cms.electron import electron_sceta
 
@@ -24,6 +24,8 @@ from columnflow.columnar_util import optional_column as optional
 from columnflow.columnar_util import IF_DATA, IF_MC
 
 from zttpol.calibration.calibrate_base import calibrate_base
+#from zttpol.calibration.tau import tau_energy_scale
+from zttpol.calibration.tau_cf import tec
 
 from zttpol.util import IF_RUN2, IF_RUN3
 

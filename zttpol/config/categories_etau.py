@@ -8,31 +8,12 @@
 import law
 import order as od
 
-from columnflow.config_util import add_category, create_category_combinations
 from zttpol.util import call_once_on_config
+from columnflow.config_util import (
+    add_category, create_category_combinations, CategoryGroup
+)
 
 logger = law.logger.get_logger(__name__)
-
-
-# ############################################################### #
-# To create combinations of categories                            #
-# the entire root -> leaf categories will be in the category_ids  #
-# other combinatorics will be produced in createHistograms task,  #
-# if mentioned                                                    #
-# ############################################################### #
-def name_fn(root_categories):
-    catlist = [cat.name for cat in root_categories.values() if cat]
-    catname = "__".join(cat.name for cat in root_categories.values() if cat)
-    return catname
-
-def kwargs_fn(root_categories):
-    return {
-        "id": sum([c.id for c in root_categories.values()]),
-        #"label": ",".join([c.label for c in root_categories.values()]),
-        "label": "+".join([c.label for c in root_categories.values()]),
-        "tags": set.union(*[cat.tags for cat in root_categories.values() if cat]),
-    }
-
 
 
 
@@ -91,48 +72,24 @@ def add_DM_categories(config: od.Config) -> None:
 
 
 
-        
-@call_once_on_config()
-def build_categories(config: od.Config) -> None:
-    categories = {
-        "channel": [config.get_category("etau")],
-        "RorF"   : [config.get_category("real_2")],
-        "abcd"   : [config.get_category("DRnum"),
-                    config.get_category("DRden"),
-                    config.get_category("AR"),
-                    config.get_category("SR")],
-        "cp"     : [config.get_category("pi_2"),
-                    config.get_category("rho_2"),
-                    config.get_category("a1dm2_2"),
-                    config.get_category("a1dm10_2"),                    
-                    config.get_category("a1dm11_2")],
-    }
-    logger.info("etau_categories")
-    n = create_category_combinations(config,
-                                     categories,
-                                     name_fn=name_fn,
-                                     kwargs_fn=kwargs_fn,
-                                     skip_existing=False)
-    logger.info(f"{n} categories have been created")
 
-
-    
 # ################### #
 # main categorization #
 # ################### #
 
 @call_once_on_config()    
-def add_etau_categories(config: od.Config) -> None:
+def add_categories(config: od.Config) -> None:
     """
     Adds all categories to a *config*.
     """
+    
     add_category(config,
                  name="etau",
                  id=10000000,
                  selection="cat_etau",
                  label=r"$e\tau_{h}$",
                  tags={"etau"})
-    
+
     #add_njet_categories(config)
     add_RealOrFake_categories(config)
     
@@ -141,4 +98,41 @@ def add_etau_categories(config: od.Config) -> None:
 
     #add_classifier_categories(config)
 
-    build_categories(config)
+    # ############################################################### #
+    # To create combinations of categories                            #
+    # the entire root -> leaf categories will be in the category_ids  #
+    # other combinatorics will be produced in createHistograms task,  #
+    # if mentioned                                                    #
+    # ############################################################### #
+
+    def name_fn(categories: dict[str, od.Category]) -> str:
+        return "__".join(cat.name for cat in categories.values() if cat)
+
+
+    def kwargs_fn(categories: dict[str, od.Category]):
+        return {
+            "id": sum([c.id for c in categories.values()]),
+            "label": "+".join([c.label for c in categories.values()]),
+            "tags": set.union(*[cat.tags for cat in categories.values() if cat]),
+        }
+
+    main_categories = {
+        "channel": CategoryGroup(['etau'], is_complete=True, has_overlap=False),
+        "RorF"   : CategoryGroup(['real_2'], is_complete=False, has_overlap=False),
+        "abcd"   : CategoryGroup(['DRnum','DRden','AR','SR'], is_complete=True, has_overlap=False),
+        "cp"     : CategoryGroup(['pi_2','rho_2','a1dm2_2','a1dm10_2','a1dm11_2'], is_complete=True, has_overlap=False),
+    }
+
+    create_category_combinations(config=config,
+                                 categories=main_categories,
+                                 name_fn=name_fn,
+                                 parent_mode="safe",
+                                 kwargs_fn=kwargs_fn,
+                                 skip_existing=False)
+    
+
+    all_cats = [cat.name for cat, _, _ in config.walk_categories()]
+    logger.warning(f"{len(all_cats)} categories created for etau channel")
+
+
+

@@ -276,7 +276,7 @@ def select_mutau(
     results += extra_lepton_veto_results
 
 
-    print("Extra lepton veto done")
+    #print("Extra lepton veto done")
     
     # Zcand results
     events, zcand_array, zcand_results = self[selzcand](events, mutau_pair)

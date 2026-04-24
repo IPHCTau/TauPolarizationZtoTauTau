@@ -26,6 +26,14 @@ maybe_import("coffea.nanoevents.methods.nanoaod")
 logger = law.logger.get_logger(__name__)
 
 
+def check_sel_results(results):
+    steps = results.steps
+    for key in steps:
+        array = steps[key]
+    pass
+
+    
+
 def get_objs_p4(collobj):
     return ak.zip(
         {

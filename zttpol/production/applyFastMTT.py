@@ -15,7 +15,7 @@ from columnflow.util import maybe_import
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column, remove_ak_column
 from columnflow.columnar_util import optional_column as optional
 
-from httcp.production.FastMTT import FastMTT
+from zttpol.production.FastMTT import FastMTT
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -33,13 +33,13 @@ logger = law.logger.get_logger(__name__)
 @producer(
     uses={
         # nano columns
-        "hcand.*", "channel_id",
+        "zcand.*", "channel_id",
         "PuppiMET.pt", "PuppiMET.phi", "PuppiMET.covXX", "PuppiMET.covXY", "PuppiMET.covYY",
     },
     produces={
         # new columns
-        "hcand.pt_fastMTT", "hcand.eta_fastMTT", "hcand.phi_fastMTT", "hcand.mass_fastMTT",
-        "hcand_invm_fastMTT",
+        "zcand.{pt_fastMTT,eta_fastMTT,phi_fastMTT,mass_fastMTT}",
+        "zcand_invm_fastMTT",
     },
 )
 def apply_fastMTT(
@@ -50,14 +50,14 @@ def apply_fastMTT(
 ) -> ak.Array:
 
     events = ak.Array(events, behavior=coffea.nanoevents.methods.nanoaod.behavior)
-    hcand_ = ak.with_name(events.hcand, "PtEtaPhiMLorentzVector")
-    hmass  = (hcand_[:,:1] + hcand_[:,1:2]).mass
+    zcand_ = ak.with_name(events.zcand, "PtEtaPhiMLorentzVector")
+    hmass  = (zcand_[:,:1] + zcand_[:,1:2]).mass
 
     # dummy if fastMTT does not run
-    hcand_pt_fastMTT = hcand_.pt
-    hcand_eta_fastMTT = hcand_.eta
-    hcand_phi_fastMTT = hcand_.phi
-    hcand_mass_fastMTT = hcand_.mass
+    zcand_pt_fastMTT = zcand_.pt
+    zcand_eta_fastMTT = zcand_.eta
+    zcand_phi_fastMTT = zcand_.phi
+    zcand_mass_fastMTT = zcand_.mass
     mass_h = hmass * 1.2
 
     
@@ -75,11 +75,11 @@ def apply_fastMTT(
         type_2 = 2 * type_1
         type_3 = 3 * type_1
         
-        pt1    = ak.to_numpy(events.hcand.pt[:,0:1])
-        eta1   = ak.to_numpy(events.hcand.eta[:,0:1])
-        phi1   = ak.to_numpy(events.hcand.phi[:,0:1])
-        mass1  = ak.to_numpy(events.hcand.mass[:,0:1])
-        dm1    = events.hcand.decayMode[:,0:1]
+        pt1    = ak.to_numpy(events.zcand.pt[:,0:1])
+        eta1   = ak.to_numpy(events.zcand.eta[:,0:1])
+        phi1   = ak.to_numpy(events.zcand.phi[:,0:1])
+        mass1  = ak.to_numpy(events.zcand.mass[:,0:1])
+        dm1    = events.zcand.decayMode[:,0:1]
         dm1_dummy = ak.values_astype(-1 * ak.ones_like(dm1), np.int32)
         dm1    = ak.to_numpy(ak.where(events.channel_id < 4, dm1_dummy, dm1))
         type1  = ak.to_numpy(ak.where(events.channel_id == etau_id,
@@ -90,11 +90,11 @@ def apply_fastMTT(
                                       )
                              )
         
-        pt2    = ak.to_numpy(events.hcand.pt[:,1:2])
-        eta2   = ak.to_numpy(events.hcand.eta[:,1:2])
-        phi2   = ak.to_numpy(events.hcand.phi[:,1:2])
-        mass2  = ak.to_numpy(events.hcand.mass[:,1:2])
-        dm2    = ak.to_numpy(events.hcand.decayMode[:,1:2])
+        pt2    = ak.to_numpy(events.zcand.pt[:,1:2])
+        eta2   = ak.to_numpy(events.zcand.eta[:,1:2])
+        phi2   = ak.to_numpy(events.zcand.phi[:,1:2])
+        mass2  = ak.to_numpy(events.zcand.mass[:,1:2])
+        dm2    = ak.to_numpy(events.zcand.decayMode[:,1:2])
         type2  = ak.to_numpy(type_1)
         
         metpt  = ak.to_numpy(events.PuppiMET.pt[:,None])
@@ -165,9 +165,9 @@ def apply_fastMTT(
             behavior=coffea.nanoevents.methods.vector.behavior,
         )
 
-        hcand_pt_fastMTT  = ak.concatenate([p4_h1_reg.pt, p4_h2_reg.pt], axis=1)
-        hcand_eta_fastMTT = ak.concatenate([p4_h1_reg.eta, p4_h2_reg.eta], axis=1)
-        hcand_phi_fastMTT = ak.concatenate([p4_h1_reg.phi, p4_h2_reg.phi], axis=1)
+        zcand_pt_fastMTT  = ak.concatenate([p4_h1_reg.pt, p4_h2_reg.pt], axis=1)
+        zcand_eta_fastMTT = ak.concatenate([p4_h1_reg.eta, p4_h2_reg.eta], axis=1)
+        zcand_phi_fastMTT = ak.concatenate([p4_h1_reg.phi, p4_h2_reg.phi], axis=1)
         h1_mass = p4_h1_reg.mass
         #from IPython import embed; embed()
         mass_check = ak.nan_to_num(ak.firsts(h1_mass, axis=1), nan=-100.0)
@@ -196,7 +196,7 @@ def apply_fastMTT(
         logger.warning(f"Out of {len(h1_mass)} events, {ak.sum(nan_mass_mask)} events have unphysical values for fastMTT h2 mass")
         logger.warning(f"Channel wise, e-tau has {ak.sum(nan_mass_mask_et)}, mu-tau has {ak.sum(nan_mass_mask_mt)}, and tau-tau has {ak.sum(nan_mass_mask_tt)} events with unphysical values")
         
-        hcand_mass_fastMTT = ak.concatenate([h1_mass, h2_mass], axis=1)
+        zcand_mass_fastMTT = ak.concatenate([h1_mass, h2_mass], axis=1)
         
         # any nan fastMTT mass?
         mass_check = ak.nan_to_num(ak.firsts(mass_h, axis=1), nan=-100.0)
@@ -212,11 +212,11 @@ def apply_fastMTT(
         logger.critical("Set [cfg.x.run_fastMTT = True] in the main config to make fastMTT run ... setting dummy variables as output")
 
 
-    events = set_ak_column(events, "hcand.pt_fastMTT",   hcand_pt_fastMTT)
-    events = set_ak_column(events, "hcand.eta_fastMTT",  hcand_eta_fastMTT)
-    events = set_ak_column(events, "hcand.phi_fastMTT",  hcand_phi_fastMTT)
-    events = set_ak_column(events, "hcand.mass_fastMTT", hcand_mass_fastMTT)        
-    events = set_ak_column_f32(events, "hcand_invm_fastMTT", mass_h)
+    events = set_ak_column(events, "zcand.pt_fastMTT",   zcand_pt_fastMTT)
+    events = set_ak_column(events, "zcand.eta_fastMTT",  zcand_eta_fastMTT)
+    events = set_ak_column(events, "zcand.phi_fastMTT",  zcand_phi_fastMTT)
+    events = set_ak_column(events, "zcand.mass_fastMTT", zcand_mass_fastMTT)        
+    events = set_ak_column_f32(events, "zcand_invm_fastMTT", mass_h)
         
     return events
 

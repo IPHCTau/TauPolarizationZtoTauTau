@@ -2,11 +2,11 @@ import law
 import re
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, InsertableDict, dev_sandbox
+from columnflow.util import maybe_import, safe_div, dev_sandbox
 from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
 
-from httcp.util import get_trigger_id_map
+from zttpol.util import get_trigger_id_map
 
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
@@ -109,7 +109,7 @@ def zpt_reweight_setup(
     self: Producer,
     reqs: dict,
     inputs: dict,
-    reader_targets: InsertableDict,
+    reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -172,19 +172,22 @@ def zpt_reweight_v2(
 
 
 @zpt_reweight_v2.requires
-def zpt_reweight_v2_requires(self: Producer, reqs: dict) -> None:
+def zpt_reweight_v2_requires(self: Producer,
+                             task: law.Task,
+                             reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @zpt_reweight_v2.setup
 def zpt_reweight_v2_setup(
-    self: Producer,
-    reqs: dict,
-    inputs: dict,
-    reader_targets: InsertableDict,
+        self: Producer,
+        task: law.Task,
+        reqs: dict,
+        inputs: dict,
+        reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -315,7 +318,7 @@ def ff_weight_setup(
     self: Producer,
     reqs: dict,
     inputs: dict,
-    reader_targets: InsertableDict,
+    reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -432,19 +435,23 @@ def met_recoil_corr(
 
 
 @met_recoil_corr.requires
-def met_recoil_corr_requires(self: Producer, reqs: dict) -> None:
+def met_recoil_corr_requires(self: Producer,
+                             task: law.Task,
+                             reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
+    
 @met_recoil_corr.setup
 def met_recoil_corr_setup(
-    self: Producer,
-    reqs: dict,
-    inputs: dict,
-    reader_targets: InsertableDict,
+        self: Producer,
+        task: law.Task,
+        reqs: dict,
+        inputs: dict,
+        reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -533,7 +540,7 @@ def top_pt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     uses={
         "channel_id",
         "hcand.*", "PuppiMET.*",
-        "dphi_met_h1", "dphi_met_h2",
+        "dphi_met_z1", "dphi_met_z2",
         "hcand_dr", "hcand_invm", "hcand_dphi",
         "pt_tt", "pt_vis",
         "Jet.*",
@@ -605,8 +612,8 @@ def classify_events(
         "pt_1"         : events.hcand.pt[:,0:1],
         "pt_2"         : events.hcand.pt[:,1:2],
         "met_pt"       : events.PuppiMET.pt[:,None],
-        "met_dphi_1"   : events.dphi_met_h1,
-        "met_dphi_2"   : events.dphi_met_h2,
+        "met_dphi_1"   : events.dphi_met_z1,
+        "met_dphi_2"   : events.dphi_met_z2,
         "dR"           : events.hcand_dr,
         "dphi"         : events.hcand_dphi,
         "pt_tt"        : events.pt_tt,
@@ -731,7 +738,7 @@ def classify_events_setup(
     self: Producer,
     reqs: dict,
     inputs: dict,
-    reader_targets: InsertableDict,
+    reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
 

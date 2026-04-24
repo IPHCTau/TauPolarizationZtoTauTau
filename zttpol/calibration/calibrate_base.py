@@ -13,9 +13,10 @@ from columnflow.calibration import Calibrator, calibrator
 
 from columnflow.calibration.cms.met import met_phi_run2, met_phi
 from columnflow.calibration.cms.jets import jec, jer
-from columnflow.calibration.cms.tau import tec
+#from columnflow.calibration.cms.tau import tec
 
-from columnflow.production.cms.mc_weight import mc_weight
+#from columnflow.production.cms.mc_weight import mc_weight
+from zttpol.production.extra_weights import scale_mc_weight
 from columnflow.production.cms.seeds import (
     deterministic_event_seeds, deterministic_jet_seeds, deterministic_electron_seeds,
 )
@@ -43,13 +44,13 @@ logger = law.logger.get_logger(__name__)
 # ----------------------------------------- #
 @calibrator(
     uses={
-        IF_MC(mc_weight),
+        IF_MC(scale_mc_weight),
         deterministic_event_seeds,
         deterministic_jet_seeds,
         deterministic_electron_seeds,
     } | {optional("GenJet.*")} | {attach_coffea_behavior},
     produces={
-        IF_MC(mc_weight),
+        IF_MC(scale_mc_weight),
         deterministic_event_seeds,
         deterministic_jet_seeds,
         deterministic_electron_seeds,
@@ -59,8 +60,9 @@ logger = law.logger.get_logger(__name__)
 def calibrate_base(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     #task = kwargs["task"]
     if self.dataset_inst.is_mc:
-        events = self[mc_weight](events, **kwargs)    
-
+        #events = self[mc_weight](events, **kwargs)    
+        events = self[scale_mc_weight](events, **kwargs)
+        
     # add deterministic seeds that could (e.g.) be used for smearings
     # seed producers
     # !! as this is the first step, the object collections should still be pt-sorted,

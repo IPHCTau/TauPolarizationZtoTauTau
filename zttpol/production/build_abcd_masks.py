@@ -9,7 +9,7 @@ import functools
 import law
 
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, InsertableDict
+from columnflow.util import maybe_import
 from columnflow.columnar_util import set_ak_column
 
 from zttpol.util import transverse_mass, IF_RUN2, IF_RUN3, IF_DATASET_IS_DY,IF_DATASET_IS_W

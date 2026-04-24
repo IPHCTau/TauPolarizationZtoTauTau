@@ -2,14 +2,15 @@ import functools
 
 from columnflow.production import Producer, producer
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.production.cms.electron import electron_weights
+#from columnflow.production.cms.electron import electron_weights
+from zttpol.production.electron_weights_cf import electron_weights
 
 from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, layout_ak_array
 from columnflow.columnar_util import optional_column as optional
 
-from columnflow.util import maybe_import, safe_div, InsertableDict
+from columnflow.util import maybe_import, safe_div
 
-from httcp.util import get_trigger_id_map
+#from httcp.util import get_trigger_id_map
 
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
@@ -19,6 +20,7 @@ warn   = maybe_import("warnings")
 # helper
 set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 
+import law
 
 
 # ------------------------------------------------- #
@@ -41,10 +43,10 @@ electron_idiso_weights = electron_weights.derive(
 
 @producer(
     uses={
-        "Electron.pt",
-        "Electron.eta",
+        "Electron.{pt,eta,phi,mass}",
         #"trigger_ids",
-        "single_e_triggered","cross_e_triggered",
+        "single_triggered",
+        "cross_triggered",
     },
     produces={
         *[f"electron_Ele30_WPTight_trigger_weight{tag}" for tag in ["", "_up", "_down"]],
@@ -79,7 +81,7 @@ def electron_trigger_weights(self: Producer,
     ele_mask = np.abs(events.Electron.pt) >= 31.0
     
     #trig_mask = events.single_e_triggered & (events.trigger_ids == trigger_id) & ele_mask
-    trig_mask = events.single_e_triggered & ele_mask
+    trig_mask = events.single_triggered & ele_mask
     trig_mask = flat_np_view(trig_mask)
 
     for syst, postfix in [
@@ -98,19 +100,22 @@ def electron_trigger_weights(self: Producer,
     return events
 
 @electron_trigger_weights.requires
-def electron_trigger_weights_requires(self: Producer, reqs: dict) -> None:
+def electron_trigger_weights_requires(self: Producer,
+                                      task: law.Task,
+                                      reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @electron_trigger_weights.setup
 def electron_trigger_weights_setup(
         self: Producer,
+        task: law.Task,
         reqs: dict,
         inputs: dict,
-        reader_targets: InsertableDict,
+        reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -130,8 +135,9 @@ def electron_trigger_weights_setup(
 
 @producer(
     uses={
-        "Electron.pt", "Electron.eta",
-        "single_e_triggered","cross_e_triggered",
+        "Electron.{pt,eta,phi,mass}",
+        "single_triggered",
+        "cross_triggered",
     },
     produces={
         *[f"electron_xtrig_weight{tag}" for tag in ["", "_up", "_down"]],
@@ -160,7 +166,7 @@ def electron_xtrigger_weights(self: Producer,
     sf_nom = np.ones_like(pt, dtype=np.float32)
     args = lambda mask, syst : (self.year, syst, self.wp, eta[mask], pt[mask])
 
-    xtrig_mask = events.cross_e_triggered & ~events.single_e_triggered & (events.Electron.pt < 30) & (np.abs(events.Electron.eta) <= 2.1)
+    xtrig_mask = events.cross_triggered & ~events.single_triggered & (events.Electron.pt < 30) & (np.abs(events.Electron.eta) <= 2.1)
     xtrig_mask = flat_np_view(xtrig_mask)
     
     for syst, postfix in [
@@ -179,19 +185,22 @@ def electron_xtrigger_weights(self: Producer,
     return events
 
 @electron_xtrigger_weights.requires
-def electron_xtrigger_weights_requires(self: Producer, reqs: dict) -> None:
+def electron_xtrigger_weights_requires(self: Producer,
+                                       task: law.Task,
+                                       reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @electron_xtrigger_weights.setup
 def electron_xtrigger_weights_setup(
         self: Producer,
+        task: law.Task,
         reqs: dict,
         inputs: dict,
-        reader_targets: InsertableDict,
+        reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib

@@ -10,7 +10,7 @@ import law
 import functools
 
 from columnflow.calibration import Calibrator, calibrator
-from columnflow.calibration.cms.tau import tec
+#from columnflow.calibration.cms.tau import tec
 
 from columnflow.util import maybe_import
 
@@ -21,6 +21,7 @@ from columnflow.columnar_util import IF_DATA, IF_MC
 from columnflow.production.util import attach_coffea_behavior
 
 from zttpol.calibration.calibrate_base import calibrate_base
+from zttpol.calibration.tau_cf import tec
 
 from zttpol.util import IF_RUN2, IF_RUN3
 

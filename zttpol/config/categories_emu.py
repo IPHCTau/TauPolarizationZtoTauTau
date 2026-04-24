@@ -91,7 +91,7 @@ def build_categories(config: od.Config) -> None:
 # ################### #
 
 @call_once_on_config()    
-def add_emu_categories(config: od.Config) -> None:
+def add_categories(config: od.Config) -> None:
     """
     Adds all categories to a *config*.
     """

@@ -9,7 +9,7 @@ from typing import Optional
 from columnflow.production import Producer, producer
 from columnflow.columnar_util import set_ak_column
 from columnflow.util import maybe_import
-from httcp.util import IF_RUN2, IF_RUN3
+from zttpol.util import IF_RUN2, IF_RUN3
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")

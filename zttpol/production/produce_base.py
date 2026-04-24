@@ -8,15 +8,15 @@ import functools
 import law
 import order as od
 from typing import Optional
+
 from columnflow.production import Producer, producer
+
 from columnflow.production.categories import category_ids
 from columnflow.production.normalization import normalization_weights
-#from columnflow.production.normalization import stitched_normalization_weights
-
+from columnflow.production.normalization import stitched_normalization_weights
 from columnflow.production.cms.pileup import pu_weight
 from columnflow.production.cms.pdf import pdf_weights
 from columnflow.production.cms.top_pt_weight import top_pt_weight
-
 from columnflow.production.util import attach_coffea_behavior
 
 from columnflow.util import maybe_import
@@ -25,29 +25,20 @@ from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column, remove_a
 from columnflow.columnar_util import optional_column as optional
 
 from columnflow.config_util import get_events_from_categories
+
 from zttpol.production.ReArrangeZcandProds import reArrangeDecayProducts, reArrangeGenDecayProducts
 from zttpol.production.PhiCP_Producer import ProduceDetPhiCP, ProduceGenPhiCP
-#from zttpol.production.weights import tauspinner_weight
-#from zttpol.production.extra_weights import zpt_reweight,zpt_reweight_v2, ff_weight, met_recoil_corr, top_pt_weight, classify_events
-
-from zttpol.production.extra_weights import zpt_reweight,zpt_reweight_v2, met_recoil_corr, top_pt_weight #, classify_events
-#from zttpol.production.muon_weights import muon_id_weights, muon_iso_weights, muon_trigger_weights, muon_xtrigger_weights
-#from zttpol.production.electron_weights import electron_idiso_weights, electron_trigger_weights, electron_xtrigger_weights
-#from zttpol.production.tau_weights import tau_all_weights, tauspinner_weights
-#from zttpol.production.tau_weights import tauspinner_weights
-
-
+from zttpol.production.extra_weights import zpt_reweight,zpt_reweight_v2,met_recoil_corr,top_pt_weight
 from zttpol.production.sample_split import split_dy
 from zttpol.production.build_abcd_masks import build_abcd_masks
-
-from zttpol.production.columnvalid import make_column_valid
+#from zttpol.production.columnvalid import make_column_valid
+from zttpol.production.applyFastMTT import apply_fastMTT
+#from zttpol.production.categories import category_ids
 
 #from zttpol.production.angular_features import ProduceDetCosPsi, ProduceGenCosPsi
-
 from zttpol.util import IF_DATASET_HAS_LHE_WEIGHTS, IF_DATASET_IS_DY, IF_DATASET_IS_W, IF_DATASET_IS_SIGNAL, IF_DATASET_IS_TT
 from zttpol.util import IF_RUN2, IF_RUN3, IF_ALLOW_STITCHING, IF_GENMATCH, IF_GENMATCH_ON_FOR_SIGNAL, transverse_mass
 
-from zttpol.production.applyFastMTT import apply_fastMTT
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -65,15 +56,15 @@ logger = law.logger.get_logger(__name__)
     uses={
         # nano columns
         "zcand.*", optional("GenTau.*"), optional("GenTauProd.*"),
-        "Jet.pt",
+        "Jet.{pt,eta,phi,mass}",
         "PuppiMET.pt", "PuppiMET.phi",
-        reArrangeDecayProducts,
-        #IF_GENMATCH_ON_FOR_SIGNAL(reArrangeGenDecayProducts),
-        #IF_GENMATCH_ON_FOR_SIGNAL(ProduceGenPhiCP), ####ProduceGenCosPsi, 
-        IF_GENMATCH(reArrangeGenDecayProducts),
-        IF_GENMATCH(ProduceGenPhiCP), ####ProduceGenCosPsi, 
-        ProduceDetPhiCP, ####ProduceDetCosPsi,
-        apply_fastMTT,
+        #reArrangeDecayProducts,
+        ##IF_GENMATCH_ON_FOR_SIGNAL(reArrangeGenDecayProducts),
+        ##IF_GENMATCH_ON_FOR_SIGNAL(ProduceGenPhiCP), ####ProduceGenCosPsi, 
+        #IF_GENMATCH(reArrangeGenDecayProducts),
+        #IF_GENMATCH(ProduceGenPhiCP), ####ProduceGenCosPsi, 
+        #ProduceDetPhiCP, ####ProduceDetCosPsi,
+        #apply_fastMTT,
     },
     produces={
         # new columns
@@ -81,15 +72,15 @@ logger = law.logger.get_logger(__name__)
         "zcand_dr",
         "zcand_dphi",
         "n_jet",
-        #IF_GENMATCH_ON_FOR_SIGNAL(ProduceGenPhiCP), ####ProduceGenCosPsi,
-        IF_GENMATCH(ProduceGenPhiCP), ####ProduceGenCosPsi,
-        ProduceDetPhiCP, ####ProduceDetCosPsi,
+        ##IF_GENMATCH_ON_FOR_SIGNAL(ProduceGenPhiCP), ####ProduceGenCosPsi,
+        #IF_GENMATCH(ProduceGenPhiCP), ####ProduceGenCosPsi,
+        #ProduceDetPhiCP, ####ProduceDetCosPsi,
         "dphi_met_z1", "dphi_met_z2",
         "met_var_qcd_z1", "met_var_qcd_z2",
         "hT",
         "pt_tt", "pt_vis",
         "mt_1", "mt_2", "mt_lep", "mt_tot",
-        apply_fastMTT,
+        #apply_fastMTT,
     },
 )
 def zcand_features(
@@ -98,7 +89,7 @@ def zcand_features(
         **kwargs
 ) -> ak.Array:
     events = ak.Array(events, behavior=coffea.nanoevents.methods.nanoaod.behavior)
-    zcand_ = ak.with_name(events.hcand, "PtEtaPhiMLorentzVector")
+    zcand_ = ak.with_name(events.zcand, "PtEtaPhiMLorentzVector")
     zcand1 = zcand_[:,0:1]
     zcand2 = zcand_[:,1:2]
 
@@ -116,7 +107,8 @@ def zcand_features(
     met_var_qcd_z1 = met.pt * np.cos(dphi_met_z1)/zcand1.pt
     met_var_qcd_z2 = met.pt * np.cos(dphi_met_z2)/zcand2.pt
 
-    # scalar sum pt  
+    # scalar sum pt
+    #from IPython import embed; embed()
     hT = ak.sum(events.Jet.pt, axis=1)
     #hT = ak.where(ak.num(events.Jet.pt, axis=1) > 0, hT, events.Jet.pt[:,:1])
     events = set_ak_column_f32(events, "hT",  hT)
@@ -151,21 +143,21 @@ def zcand_features(
     # ################## #
     #     Run FastMTT    #
     # ################## #
-    logger.info(" >>>--- FastMTT-Wiktors --->>> [Not as fast as you think]")
-    events = self[apply_fastMTT](events, run_fmtt=self.config_inst.x.enable_fastMTT, **kwargs)
+    #logger.info(" >>>--- FastMTT-Wiktors --->>> [Not as fast as you think]")
+    #events = self[apply_fastMTT](events, run_fmtt=self.config_inst.x.enable_fastMTT, **kwargs)
 
     # ########################### #
     # -------- For PhiCP -------- #
     # ########################### #
-    events, P4_dict = self[reArrangeDecayProducts](events)
-    events   = self[ProduceDetPhiCP](events, P4_dict)
+    #events, P4_dict = self[reArrangeDecayProducts](events)
+    #events   = self[ProduceDetPhiCP](events, P4_dict)
     ###events  = self[ProduceDetCosPsi](events, P4_dict) # for CosPsi only
     
-    if self.config_inst.x.extra_tags.genmatch:
-        #if "is_signal" in list(self.dataset_inst.aux.keys()):
-        events, P4_gen_dict = self[reArrangeGenDecayProducts](events)
-        events = self[ProduceGenPhiCP](events, P4_gen_dict) 
-        #events = self[ProduceGenCosPsi](events, P4_gen_dict) # for CosPsi only
+    #if self.config_inst.x.extra_tags.genmatch:
+        ##if "is_signal" in list(self.dataset_inst.aux.keys()):
+        #events, P4_gen_dict = self[reArrangeGenDecayProducts](events)
+        #events = self[ProduceGenPhiCP](events, P4_gen_dict) 
+        ##events = self[ProduceGenCosPsi](events, P4_gen_dict) # for CosPsi only
     # ########################### #
     
     return events
@@ -175,19 +167,14 @@ def zcand_features(
 
 @producer(
     uses={
-        make_column_valid,
+        #make_column_valid,
         attach_coffea_behavior,
         normalization_weights,
-        "zcand.decayMode",
-        #IF_ALLOW_STITCHING(stitched_normalization_weights),
+        #"zcand.decayMode",
+        IF_ALLOW_STITCHING(stitched_normalization_weights),
         #split_dy,
         pu_weight,
-        IF_DATASET_HAS_LHE_WEIGHTS(pdf_weights),
-        # -- muon -- #
-        #muon_id_weights,
-        #muon_iso_weights,
-        #muon_trigger_weights,
-        #muon_xtrigger_weights,
+        #IF_DATASET_HAS_LHE_WEIGHTS(pdf_weights),
         # -- electron -- #
         #electron_idiso_weights,
         #electron_trigger_weights,
@@ -207,13 +194,13 @@ def zcand_features(
         #classify_events,
     },
     produces={
-        make_column_valid,
+        #make_column_valid,
         attach_coffea_behavior,
         normalization_weights,
         IF_ALLOW_STITCHING(stitched_normalization_weights),
         #split_dy,
         pu_weight,
-        IF_DATASET_HAS_LHE_WEIGHTS(pdf_weights),
+        #IF_DATASET_HAS_LHE_WEIGHTS(pdf_weights),
         # -- muon -- #
         #muon_id_weights,
         #muon_iso_weights,
@@ -225,7 +212,7 @@ def zcand_features(
         #electron_xtrigger_weights,
         # -- tau -- #
         #tau_all_weights,
-        IF_DATASET_IS_SIGNAL(tauspinner_weights),
+        #IF_DATASET_IS_SIGNAL(tauspinner_weights),
         IF_DATASET_IS_TT(top_pt_weight),
         IF_DATASET_IS_DY(zpt_reweight_v2),
         met_recoil_corr,
@@ -233,46 +220,27 @@ def zcand_features(
         category_ids,
         build_abcd_masks,
         #ff_weight,
+        "channel_id",
         "process_id",
         #classify_events,        
     },
 )
 def produce_base(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 
-    events = self[make_column_valid](events, **kwargs)
-    
+    #events = self[make_column_valid](events, **kwargs)
     events = self[attach_coffea_behavior](events, **kwargs)
     
-    #if self.dataset_inst.is_mc:
     if self.dataset_inst.has_tag("is_dy") or self.dataset_inst.has_tag("is_w") or self.dataset_inst.has_tag("is_signal"):
         events = self[met_recoil_corr](events, **kwargs)
 
-    events = self[zcand_features](events, **kwargs)
-
-    #logger.info(" >>>--- Evaluate Classifier Models (IC) --->>> [In extra_weights.py and processes.py]")
-    #events = self[classify_events](events, **kwargs)
-    
-    #logger.warning("NO b-veto cut for tautau categories : Imperial")
+    events = self[zcand_features](events, **kwargs)    
     events = self[build_abcd_masks](events, **kwargs)
-    # building category ids
-    events, category_ids_debug_dict = self[category_ids](events, debug=False)
-
-    # debugging categories
-    if self.config_inst.x.verbose.production.main:
-        from zttpol.production.debug import category_flow
-        #print(category_ids_debug_dict)
-        od_cats_in_config = self.config_inst.categories
-        cat = [cat for cat in od_cats_in_config if cat.name == self.config_inst.x.channel][0]
-        cat_events = get_events_from_categories(events, cat)
-        logger.info(f"Analysis : {self.config_inst.x.channel}")
-        category_flow(self.config_inst.x.channel, cat_events)
-
+    events = self[category_ids](events, debug=False)
 
     if self.dataset_inst.is_mc:
         # allow stitching is applicable only when datasets are DY or wjets, only if the stitching booleans are true in config
         allow_stitching = bool(ak.any([(self.dataset_inst.has_tag("is_dy_m50") and self.config_inst.x.allow_dy_stitching),
                                        (self.dataset_inst.has_tag("is_w") and self.config_inst.x.allow_w_stitching)]))
-        #from IPython import embed; embed()
         if allow_stitching:
             events = self[stitched_normalization_weights](events, **kwargs)
         else:
@@ -281,8 +249,8 @@ def produce_base(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         # TODO : pileup weight is constrained to max value 10
         # TODO : check columnflow production/pileup
         events = self[pu_weight](events, **kwargs)
-        if self.has_dep(pdf_weights):
-            events = self[pdf_weights](events, **kwargs)
+        #if self.has_dep(pdf_weights):
+        #    events = self[pdf_weights](events, **kwargs)
 
         # -- Z-pT reweighting with corrections from Imperial (Danny) and Kansas (Dennis : v2)
         #if self.has_dep(zpt_reweight):
@@ -290,9 +258,7 @@ def produce_base(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
             #events = self[zpt_reweight](events, **kwargs)
             events = self[zpt_reweight_v2](events, **kwargs)
 
-        #from IPython import embed; embed()
         #processes = self.dataset_inst.processes.names()
-        
         #if self.dataset_inst.has_tag("is_dy"):
         #    logger.warning(f"splitting Drell-Yan dataset <{self.dataset_inst.name}>")
         #    events = self[split_dy](events,**kwargs)
@@ -303,6 +269,5 @@ def produce_base(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         else:
             logger.warning(f"No top pt reweihting for <{self.dataset_inst.name}> dataset")
 
-    #events = self[ff_weight](events, **kwargs)        
     
     return events

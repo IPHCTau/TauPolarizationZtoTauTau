@@ -28,6 +28,7 @@ from columnflow.production.util import attach_coffea_behavior
 from columnflow.util import maybe_import
 from columnflow.columnar_util import optional_column as optional
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
+from columnflow.columnar_util import IF_DATA, IF_MC
 
 from zttpol.selection.physics_objects import (
     muon_selection, electron_selection, tau_selection, jet_selection, genZ_selection
@@ -36,6 +37,8 @@ from zttpol.selection.physics_objects import (
 from zttpol.selection.lepton_veto import tau_veto_from_dy
 from zttpol.selection.trigger import trigger_selection
 #from zttpol.selection.event_category import get_categories
+
+from zttpol.production.columnvalid import make_column_valid
 
 from zttpol.util import filter_by_triggers, get_objs_p4, trigger_object_matching_deep, IF_DATASET_IS_DY, IF_DATASET_IS_W, IF_DATASET_IS_SIGNAL
 
@@ -61,7 +64,7 @@ maybe_import("coffea.nanoevents.methods.nanoaod")
         process_ids,
         trigger_selection,
         ##IF_DATASET_IS_DY(genZ_selection),
-        genZ_selection,
+        IF_MC(genZ_selection),
         muon_selection, 
         electron_selection, 
         tau_selection, 
@@ -75,12 +78,13 @@ maybe_import("coffea.nanoevents.methods.nanoaod")
         "PuppiMET.{pt,phi}",
         "Jet.{pt,eta,phi,neEmEF,chEmEF}",
         "Flag.ecalBadCalibFilter",
+        make_column_valid,
     },
     produces={
         # selectors / producers whose newly created columns should be kept
         trigger_selection,
         ##IF_DATASET_IS_DY(genZ_selection),
-        genZ_selection,
+        IF_MC(genZ_selection),
         muon_selection, 
         electron_selection, 
         tau_selection, 
@@ -89,7 +93,8 @@ maybe_import("coffea.nanoevents.methods.nanoaod")
         #get_categories, 
         process_ids,
         #extra_lepton_veto, 
-        ##double_lepton_veto, 
+        ##double_lepton_veto,
+        make_column_valid,
     },
     exposed=False,
 )
@@ -158,8 +163,8 @@ def select_base(
     
     # Get genZ collection for Zpt reweighting
     #if self.dataset_inst.has_tag("is_dy") or self.dataset_inst.has_tag("is_w") or self.dataset_inst.has_tag("is_signal"):
-    #if self.dataset_inst.is_mc:
-    events = self[genZ_selection](events, **kwargs)
+    if self.dataset_inst.is_mc:
+        events = self[genZ_selection](events, **kwargs)
        
     # electron selection
     # e.g. ele_idx: [ [], [0,1], [], [], [1,2] ] 
@@ -206,6 +211,8 @@ def select_base(
     #results += jet_clean_result
 
     events = self[process_ids](events, **kwargs)
+
+    events = self[make_column_valid](events)
     
     #print("Select_base done")
     

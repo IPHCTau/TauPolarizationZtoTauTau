@@ -46,7 +46,8 @@ def add_config (ana: od.Analysis,
 
     #from IPython import embed; embed()
     logger.info(f"Channel to be analyzed: {channel}")
-    assert channel in {'emu','etau','mutau','tautau'}; raise RuntimeError(f"WRONG CHANNEL : {channel}")
+    if channel not in {'emu','etau','mutau','tautau'}:
+        raise RuntimeError(f"WRONG CHANNEL : {channel}")
     
     # gather campaign data
     run = campaign.x.run
@@ -314,7 +315,7 @@ def add_config (ana: od.Analysis,
     cfg.x.default_hist_producer   = "cf_default"
     cfg.x.default_ml_model        = None
     cfg.x.default_inference_model = "main"
-    cfg.x.default_categories      = (f"{channel}",)
+    cfg.x.default_categories      = "main"
     #cfg.x.default_variables = ("n_jet", "jet1_pt")
     cfg.x.default_variables       = ("event","channel_id")
     #cfg.x.default_weight_producer = "main" # "normalization_only"
@@ -553,7 +554,9 @@ def add_config (ana: od.Analysis,
     # --------------------------------------------------------------------------------------------- #
 
     if year == 2022:
-        if channel == 'etau':
+        if channel == 'emu':
+            from zttpol.config.triggers_emu import add_triggers_2022
+        elif channel == 'etau':
             from zttpol.config.triggers_etau import add_triggers_2022
         elif channel == 'mutau':
             from zttpol.config.triggers_mutau import add_triggers_2022
@@ -563,7 +566,9 @@ def add_config (ana: od.Analysis,
         add_triggers_2022(cfg, postfix)
 
     elif year == 2023:
-        if channel == 'etau':
+        if channel == 'emu':
+            from zttpol.config.triggers_emu import add_triggers_2023
+        elif channel == 'etau':
             from zttpol.config.triggers_etau import add_triggers_2023
         elif channel == 'mutau':
             from zttpol.config.triggers_mutau import add_triggers_2023
@@ -636,7 +641,7 @@ def add_config (ana: od.Analysis,
         "jet_veto_map"      : (f"{corrdir}/JME/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/jetvetomaps.json.gz", "v1"), # JetVeto
         "met_phi_corr"      : (f"{corrdir}/JME/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/met_xyCorrections_{year}_{year}{year_postfix}.json.gz", ""), # MET XY Correction
         # https://gitlab.cern.ch/cms-analysis-corrections/MUO
-        "muon_sf"           : (f"{corrdir}/MUO/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/muon_Z.json.gz",      "v1"), # Mu POG SF
+        "muon_sf"           : (f"{corrdir}/MUO/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/muon_Z.json.gz", "v1"), # Mu POG SF
         "muon_sr"           : (f"{corrdir}/MUO/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/muon_scalesmearing.json.gz", "v1"), # Mu Scale Smearing
         "muon_sr_tools"     : (f"{tooldir}/MuonScaReKIT/scripts/MuonScaRe.py", ""),
         # -- https://gitlab.cern.ch/cclubbtautau/AnalysisCore/-/blob/main/data/TriggerScaleFactors/2022preEE/CrossMuTauHlt.json?ref_type=heads
@@ -935,17 +940,20 @@ def add_config (ana: od.Analysis,
                 "vs_j": {"VVVLoose": 1, "VVLoose": 2, "VLoose": 3, "Loose": 4, "Medium": 5, "Tight": 6, "VTight": 7, "VVTight": 8},
             },
             "vs_e": {
+                "emu"    : "Tight", # need to check
                 "etau"   : "Tight",
                 "mutau"  : "VVLoose",
                 "tautau" : "VVLoose",
             },
             # All DeepTauVsMu WPs are changed to TIGHT WPs (studied by IC)
             "vs_m": {
+                "emu"    : "Tight", # need to check
                 "etau"   : "Tight",
                 "mutau"  : "Tight",
                 "tautau" : "Tight", #"VLoose",
             },
             "vs_j": {
+                "emu"    : "VTight", # need to check
                 "etau"   : "VTight",
                 "mutau"  : "VTight", ##"Medium" : OLD,
                 "tautau" : "VTight", ## VTight : Proposed by Imperial, was Medium in Run2
@@ -1342,7 +1350,7 @@ def add_config (ana: od.Analysis,
     #---------------------------------------------------------------------------------------------#
 
     get_shifts = functools.partial(get_shifts_from_sources, cfg)
-    cfg.x.event_weights = DotDict({
+    cfg.x.event_emu_weights = DotDict({
         "normalization_weight"                  : [],
         "pu_weight"                             : get_shifts("minbias_xs"),
         "electron_idiso_weight"                 : get_shifts("e"),
@@ -1352,13 +1360,57 @@ def add_config (ana: od.Analysis,
         "muon_iso_weight"                       : get_shifts("mu_iso"),
         "muon_IsoMu24_trigger_weight"           : get_shifts("mu_trig"),
         "muon_xtrig_weight"                     : get_shifts("mu_xtrig"),
-        "tau_weight"                            : get_shifts("tau"),
-        "tau_trigger_weight"                    : get_shifts("tau_trig"),
-        "ff_weight"                             : [],
+        #"ff_weight"                             : [],
         #"ff_cls_corr_weight"                    : [],
         ##"ff_ext_corr_weight"                    : [],
-        "tauspinner_weight"                     : get_shifts("tauspinner"),
+        #"tauspinner_weight"                     : get_shifts("tauspinner"),
         #"pdf_weight"                            : [],
+        "zpt_reweight"                          : get_shifts("zpt"),
+        "top_pt_weight"                         : [],
+    })
+    cfg.x.event_etau_weights = DotDict({
+        "normalization_weight"                  : [],
+        "pu_weight"                             : get_shifts("minbias_xs"),
+        "electron_idiso_weight"                 : get_shifts("e"),
+        "electron_Ele30_WPTight_trigger_weight" : get_shifts("e_trig"),
+        "electron_xtrig_weight"                 : get_shifts("e_xtrig"),
+        "tau_weight"                            : get_shifts("tau"),
+        #"tau_trigger_weight"                    : get_shifts("tau_trig"),
+        #"ff_weight"                             : [],
+        ##"ff_cls_corr_weight"                    : [],
+        ###"ff_ext_corr_weight"                    : [],
+        ##"tauspinner_weight"                     : get_shifts("tauspinner"),
+        ##"pdf_weight"                            : [],
+        "zpt_reweight"                          : get_shifts("zpt"),
+        "top_pt_weight"                         : [],
+    })
+    cfg.x.event_mutau_weights = DotDict({
+        "normalization_weight"                  : [],
+        "pu_weight"                             : get_shifts("minbias_xs"),
+        "muon_id_weight"                        : get_shifts("mu_id"),
+        "muon_iso_weight"                       : get_shifts("mu_iso"),
+        "muon_IsoMu24_trigger_weight"           : get_shifts("mu_trig"),
+        "muon_xtrig_weight"                     : get_shifts("mu_xtrig"),
+        "tau_weight"                            : get_shifts("tau"),
+        #"tau_trigger_weight"                    : get_shifts("tau_trig"),
+        #"ff_weight"                             : [],
+        ##"ff_cls_corr_weight"                    : [],
+        ###"ff_ext_corr_weight"                    : [],
+        ##"tauspinner_weight"                     : get_shifts("tauspinner"),
+        ##"pdf_weight"                            : [],
+        "zpt_reweight"                          : get_shifts("zpt"),
+        "top_pt_weight"                         : [],
+    })
+    cfg.x.event_tautau_weights = DotDict({
+        "normalization_weight"                  : [],
+        "pu_weight"                             : get_shifts("minbias_xs"),
+        "tau_weight"                            : get_shifts("tau"),
+        #"tau_trigger_weight"                    : get_shifts("tau_trig"),
+        #"ff_weight"                             : [],
+        ##"ff_cls_corr_weight"                    : [],
+        ###"ff_ext_corr_weight"                    : [],
+        ##"tauspinner_weight"                     : get_shifts("tauspinner"),
+        ##"pdf_weight"                            : [],
         "zpt_reweight"                          : get_shifts("zpt"),
         "top_pt_weight"                         : [],
     })
@@ -1429,17 +1481,25 @@ def add_config (ana: od.Analysis,
     # Add categories described in categorization.py
     #---------------------------------------------------------------------------------------------#
 
+    from importlib import import_module
+
+    module = import_module(f"zttpol.config.categories_{channel}")
+    module.add_categories(cfg)
+
+    """
     if channel == 'emu':
-        from zttpol.config.categories_emu import add_emu_categories as add_categories
+        from zttpol.config.categories_emu import add_categories
     elif channel == 'etau':
-        from zttpol.config.categories_etau import add_etau_categories as add_categories
+        from zttpol.config.categories_etau import add_categories
     elif channel == 'mutau':
-        from zttpol.config.categories_mutau import add_mutau_categories as add_categories
+        from zttpol.config.categories_mutau import add_categories
     elif channel == 'tautau':
-        from zttpol.config.categories_tautau import add_tautau_categories as add_categories
+        from zttpol.config.categories_tautau import add_categories
 
     add_categories(cfg)
+    """
 
+    
     #cfg.x.ff_apply_id_map = DotDict.wrap({
     #    "etau"  : {},
     #    "mutau" : {},
@@ -1470,6 +1530,7 @@ def add_config (ana: od.Analysis,
             # general event info
             "run", "luminosityBlock", "event", "LHEPdfWeight",
             "PV.x","PV.y","PV.z","PV.npvs","PV.npvsGood",
+            "mc_weight",
             "PVBS.*",
             "SV.x","SV.y","SV.z",#"SV.pAngle",
             "Pileup.nTrueInt","Pileup.nPU","genWeight", "LHEWeight.originalXWGTUP",
@@ -1648,6 +1709,7 @@ def add_config (ana: od.Analysis,
             "run","luminosityBlock","event","LHEPdfWeight",
             "PV.x","PV.y","PV.z","PV.npvs","PV.npvsGood",
             "PVBS.x", "PVBS.y", "PVBS.z",
+            "mc_weight",
             #"SV.x","SV.y","SV.z",#"SV.pAngle",
             "Pileup.nTrueInt","Pileup.nPU","genWeight",
             "single_triggered", "cross_triggered",

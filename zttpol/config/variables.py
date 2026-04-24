@@ -201,14 +201,6 @@ def add_highlevel_features(cfg: od.Config) -> None:
         binning=(32, -3.2, 3.2),
         x_title=r"PuppiMET $\phi$",
     )
-    cfg.add_variable(
-        name="hcand_mass",
-        expression="hcand_obj.mass",
-        null_value=EMPTY_FLOAT,
-        binning=(40, 0.0, 200.0),
-        unit="GeV",
-        x_title=r"$m_{vis}$",
-    )
     # classifier scores
     cfg.add_variable(
         name="bdt_score_dy",
@@ -287,205 +279,197 @@ def add_cutflow_features(cfg: od.Config) -> None:
     )
 
 
-def add_hcand_features(cfg: od.Config) -> None:
+def add_zcand_features(cfg: od.Config) -> None:
     """
-    Adds h lepton features only
+    Adds z candidate features only
     """
     for i in range(2):
         cfg.add_variable(
-            name=f"hcand_{i+1}_pt",
-            expression=f"hcand.pt[:,{i}]",
+            name=f"zcand_{i+1}_pt",
+            expression=f"zcand.pt[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(40, 0., 200.),
             unit="GeV",
             #x_title=f"hcand[{i+1}]" + r" $p_{T}$",
-            x_title=r"Leading tau p$_{T}$" if i == 0 else r"Subleading tau p$_{T}$",
+            x_title=r"Leading lepton p$_{T}$" if i == 0 else r"Subleading lepton p$_{T}$",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_pt_MediumWP_binvar",
-            expression=f"hcand.pt[:,{i}]",
+            name=f"zcand_{i+1}_pt_MediumWP_binvar",
+            expression=f"zcand.pt[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=[35,40,45,50,55,60,65,70,80,90,100,120,140,200],
             unit="GeV",
-            x_title=f"hcand[{i+1}]" + r" $p_{T}$",
+            x_title=f"zcand[{i+1}]" + r" $p_{T}$",
         )        
         cfg.add_variable(
-            name=f"hcand_{i+1}_pt_VTightWP_binvar",
-            expression=f"hcand.pt[:,{i}]",
+            name=f"zcand_{i+1}_pt_VTightWP_binvar",
+            expression=f"zcand.pt[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=[35,40,45,50,55,60,65,70,80,120,200],
             unit="GeV",
-            x_title=f"hcand[{i+1}]" + r" $p_{T}$",
+            x_title=f"zcand[{i+1}]" + r" $p_{T}$",
         )        
         cfg.add_variable(
-            name=f"hcand_{i+1}_pt_VTightWP_binvar_v2",
-            expression=f"hcand.pt[:,{i}]",
+            name=f"zcand_{i+1}_pt_VTightWP_binvar_v2",
+            expression=f"zcand.pt[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=[35,40,45,50,55,60,65,70,80,100,140,200],
             unit="GeV",
-            x_title=f"hcand[{i+1}]" + r" $p_{T}$",
+            x_title=f"zcand[{i+1}]" + r" $p_{T}$",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_pt_fastMTT",
-            expression=f"hcand.pt_fastMTT[:,{i}]",
+            name=f"zcand_{i+1}_pt_fastMTT",
+            expression=f"zcand.pt_fastMTT[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(40, 0., 200.),
             unit="GeV",
-            x_title=r"Leading tau p$_{T}$ (fastMTT)" if i == 0 else r"Subleading tau p$_{T}$ (fastMTT)",  
+            x_title=r"Leading lepton p$_{T}$ (fastMTT)" if i == 0 else r"Subleading lepton p$_{T}$ (fastMTT)",  
             #x_title=f"hcand[{i+1}]" + r" $p_{T}$ (fastMTT)",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_phi",
-            expression=f"hcand.phi[:,{i}]",
+            name=f"zcand_{i+1}_phi",
+            expression=f"zcand.phi[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(32, -3.2, 3.2),
-            x_title=r"Leading tau $\phi$" if i == 0 else r"Subleading tau $\phi$",
+            x_title=r"Leading lepton $\phi$" if i == 0 else r"Subleading lepton $\phi$",
             #x_title=f"hcand[{i+1}]" + r" $\phi$",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_phi_fastMTT",
-            expression=f"hcand.phi_fastMTT[:,{i}]",
+            name=f"zcand_{i+1}_phi_fastMTT",
+            expression=f"zcand.phi_fastMTT[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(32, -3.2, 3.2),
-            x_title=f"hcand[{i+1}]" + r" $\phi$ (fastMTT)",
+            x_title=f"zcand[{i+1}]" + r" $\phi$ (fastMTT)",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_eta",
-            expression=f"hcand.eta[:,{i}]",
+            name=f"zcand_{i+1}_eta",
+            expression=f"zcand.eta[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(25, -2.5, 2.5),
-            x_title=r"Leading tau $\eta$" if i == 0 else r"Subleading tau $\eta$",
+            x_title=r"Leading lepton $\eta$" if i == 0 else r"Subleading lepton $\eta$",
             #x_title=f"hcand[{i+1}]" + r" $\eta$",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_eta_fastMTT",
-            expression=f"hcand.eta_fastMTT[:,{i}]",
+            name=f"zcand_{i+1}_eta_fastMTT",
+            expression=f"zcand.eta_fastMTT[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(25, -2.5, 2.5),
-            x_title=f"hcand[{i+1}]" + r" $\eta$ (fastMTT)",
+            x_title=f"zcand[{i+1}]" + r" $\eta$ (fastMTT)",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_mass",
-            expression=f"hcand.mass[:,{i}]",
+            name=f"zcand_{i+1}_mass",
+            expression=f"zcand.mass[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(30, 0., 3.0),
             unit="GeV",
-            x_title=r"Leading tau mass" if i == 0 else r"Subleading tau mass",
+            x_title=r"Leading lepton mass" if i == 0 else r"Subleading lepton mass",
             #x_title=f"hcand[{i+1}]" + " mass",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_mass_fastMTT",
-            expression=f"hcand.mass_fastMTT[:,{i}]",
+            name=f"zcand_{i+1}_mass_fastMTT",
+            expression=f"zcand.mass_fastMTT[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(30, 0., 3.0),
             unit="GeV",
-            x_title=f"hcand[{i+1}]" + " mass (fastMTT)",
+            x_title=f"zcand[{i+1}]" + " mass (fastMTT)",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_decayMode",
-            expression=f"hcand.decayMode[:,{i}]",
+            name=f"zcand_{i+1}_decayMode",
+            expression=f"zcand.decayMode[:,{i}]",
             #null_value=EMPTY_INT,
             binning=(12, -0.5, 11.5),
-            x_title=r"Leading tau DM" if i == 0 else r"Subleading tau DM",            
+            x_title=r"Leading lepton DM" if i == 0 else r"Subleading lepton DM",            
             #x_title=f"hcand[{i+1}]" + r" $DM (PNet)$",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_IPx",
-            expression=f"hcand.IPx[:,{i}]",
+            name=f"zcand_{i+1}_IPx",
+            expression=f"zcand.IPx[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(30, -0.015, 0.015),
-            x_title=f"hcand[{i+1}]" + r" $IP_{x}$",
+            x_title=f"zcand[{i+1}]" + r" $IP_{x}$",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_IPy",
-            expression=f"hcand.IPy[:,{i}]",
+            name=f"zcand_{i+1}_IPy",
+            expression=f"zcand.IPy[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(30, -0.015, 0.015),
-            x_title=f"hcand[{i+1}]" + r" $IP_{y}$",
+            x_title=f"zcand[{i+1}]" + r" $IP_{y}$",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_IPz",
-            expression=f"hcand.IPz[:,{i}]",
+            name=f"zcand_{i+1}_IPz",
+            expression=f"zcand.IPz[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(30, -0.015, 0.015),
-            x_title=f"hcand[{i+1}]" + r" $IP_{z}$",
+            x_title=f"zcand[{i+1}]" + r" $IP_{z}$",
         )
         cfg.add_variable(
-            name=f"hcand_{i+1}_IPsig",
-            expression=f"hcand.IPsig[:,{i}]",
+            name=f"zcand_{i+1}_IPsig",
+            expression=f"zcand.IPsig[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(40, 0.0, 10),
-            x_title=f"hcand[{i+1}]" + r" $IP Significance$",
+            x_title=f"zcand[{i+1}]" + r" $IP Significance$",
         )
         cfg.add_variable(
-            name=f"dphi_met_h{i+1}",
-            expression=f"dphi_met_h{i+1}",
+            name=f"dphi_met_z{i+1}",
+            expression=f"dphi_met_z{i+1}",
             null_value=EMPTY_FLOAT,
             binning=(32, 0, 3.2),
-            x_title=f"hcand[{i+1}]" + r" $-MET \Delta_{phi}$",
+            x_title=f"zcand[{i+1}]" + r" $-MET \Delta_{phi}$",
         )
         cfg.add_variable(
-            name=f"met_var_qcd_h{i+1}",
-            expression=f"met_var_qcd_h{i+1}",
+            name=f"met_var_qcd_z{i+1}",
+            expression=f"met_var_qcd_z{i+1}",
             null_value=EMPTY_FLOAT,
             binning=(30, -1.5, 1.5),
             x_title=r"$MET var QCD$",
         )    
 
     cfg.add_variable(
-        name="hcand_invm",
-        expression="hcand_invm",
+        name="zcand_invm",
+        expression="zcand_invm",
         null_value=EMPTY_FLOAT,
         binning=(50, 0.0, 400.0),
         #binning=(50, 0.0, 200.0),
         unit="GeV",
-        x_title=r"$\tau_{h}\tau_{h}$ visible mass",
+        x_title=r"lepton pair visible mass",
     )
     cfg.add_variable(
-        name="hcand_invm_1bin",
-        expression="hcand_invm",
+        name="zcand_invm_1bin",
+        expression="zcand_invm",
         null_value=EMPTY_FLOAT,
         binning=(1, 0.0, 10000.0),
         unit="GeV",
         x_title=r"$visible mass$",
     )
     cfg.add_variable(
-        name="hcand_invm_10GeV",
-        expression="hcand_invm",
+        name="zcand_invm_10GeV",
+        expression="zcand_invm",
         null_value=EMPTY_FLOAT,
         binning=(40, 0.0, 400.0),
         unit="GeV",
         x_title=r"$visible mass$",
     )
     cfg.add_variable(
-        name="hcand_invm_fastMTT",
-        expression="hcand_invm_fastMTT",
+        name="zcand_invm_fastMTT",
+        expression="zcand_invm_fastMTT",
         null_value=EMPTY_FLOAT,
         binning=(50, 0.0, 400.0),
         unit="GeV",
         x_title=r"$\tau\tau$ invariant mass (fastMTT)",
     )
     cfg.add_variable(
-        name="hcand_invm_fastMTT_limit",
-        expression="hcand_invm_fastMTT",
-        null_value=EMPTY_FLOAT,
-        binning=(4000, 110.0, 150.0),
-        unit="GeV",
-        x_title=r"$invariant mass (fastMTT)$",
-    )
-    cfg.add_variable(
-        name="hcand_dr",
-        expression="hcand_dr",
+        name="zcand_dr",
+        expression="zcand_dr",
         null_value=EMPTY_FLOAT,
         binning=(40, 0.0, 5.0),
-        x_title=r"$\Delta R (\tau_{h}^{1},\tau_{h}^{2})$",
+        x_title=r"$\Delta R$",
     )
     cfg.add_variable(
-        name="hcand_dphi",
-        expression="hcand_dphi",
+        name="zcand_dphi",
+        expression="zcand_dphi",
         null_value=EMPTY_FLOAT,
         binning=(32, 0.0, 3.2),
-        x_title=r"$\Delta \phi(h1,h2)$",
+        x_title=r"$\Delta \phi(\ell \ell)$",
     )
     cfg.add_variable(
         name="pt_vis",
@@ -773,8 +757,8 @@ def add_variables(cfg: od.Config) -> None:
     add_lepton_features(cfg)
     add_jet_features(cfg)
     add_highlevel_features(cfg)
-    add_hcand_features(cfg)
-    add_weight_features(cfg)
+    add_zcand_features(cfg)
+    #add_weight_features(cfg)
     add_cutflow_features(cfg)
-    add_test_variables(cfg)
-    add_gen_features(cfg)
+    #add_test_variables(cfg)
+    #add_gen_features(cfg)

@@ -541,8 +541,8 @@ def jet_selection_init(self: Selector) -> None:
 @selector(
     uses={"Jet.{pt,eta,phi,mass,jetId,btagDeepFlavB}",
           "zcand.{pt,eta,phi,mass,decayMode}",
-          optional("cross_tau_jet_triggered"),
-          optional("cross_tau_triggered"),
+          optional("cross_triggered"),
+          optional("cross_jet_triggered"),
           "channel_id"},
     #produces={"Jet.pass_ditaujet"},
     exposed=False,
@@ -601,8 +601,8 @@ def jet_cleaning(
         good_jet_indices_, ditaujet_jet_indices_ = ak.unzip(temp)
         temp2 = ak.any((good_jet_indices_ - ditaujet_jet_indices_ == 0), axis=1)
 
-        trigger_mask = (events.channel_id == 4) & (ak.num(ditaujet_jet_indices_) > 0)  & events.cross_tau_jet_triggered & ~events.cross_tau_triggered
-        mask = ak.where(trigger_mask, temp2, True)
+        trigger_mask = (events.channel_id == 4) & (ak.num(ditaujet_jet_indices_) > 0)  & events.cross_jet_triggered & ~events.cross_triggered
+        mask = ak.fill_none(ak.where(trigger_mask, temp2, True), False)
 
         objects["Jet"]["trigJet"] = ditaujet_jet_indices
 

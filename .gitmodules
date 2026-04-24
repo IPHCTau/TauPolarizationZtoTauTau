@@ -4,7 +4,7 @@
 	branch = master
 [submodule "modules/cmsdb"]
 	path = modules/cmsdb
-	url = git@github.com:uhh-cms/cmsdb.git
+	url = https://github.com/IPHCTau/cmsdb.git
 	branch = master
 [submodule "zttpol/data/corrections/JME/Run3_2022_Summer22_NanoAODv12"]
 	path = zttpol/data/corrections/JME/Run3_2022_Summer22_NanoAODv12

@@ -4,27 +4,52 @@
 Prepare h-Candidate from SelectionResult: selected lepton indices & channel_id [trigger matched] 
 """
 
+import law
+
 from typing import Optional
+from operator import and_
+from functools import reduce
+from collections import defaultdict, OrderedDict
+
+#from columnflow.production.processes import process_ids
+from columnflow.production.util import attach_coffea_behavior
+
 from columnflow.selection import Selector, SelectionResult, selector
+from columnflow.selection.stats import increment_stats
 #from columnflow.selection.util import create_collections_from_masks
 from columnflow.util import maybe_import
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 from columnflow.columnar_util import optional_column as optional
+
+from zttpol.selection.physics_objects import (
+    gentau_selection, jet_cleaning
+)
+from zttpol.selection.select_base import select_base
+from zttpol.selection.lepton_veto import extra_lepton_veto
+from zttpol.selection.custom_stats import custom_increment_stats
+from zttpol.selection.match_trigobj import match_trigobjs_fullhad
+from zttpol.selection.zcand import selzcand, selzcandprod
+from zttpol.selection.debug import debug_main
+
+#from zttpol.production.stitching_NLO import process_ids_dy
+#from zttpol.production.stitching_LO import process_ids_w
+#from zttpol.production.extra_weights import scale_mc_weight
+
+from zttpol.util import transverse_mass
+from zttpol.util import IF_RUN2, IF_RUN3
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 coffea = maybe_import("coffea")
 maybe_import("coffea.nanoevents.methods.nanoaod")
 
-from zttpol.util import filter_by_triggers, get_objs_p4, trigger_matching_extra, trigger_object_matching_deep, trigger_object_matching_jets_deep
 
-
-
-
+#from zttpol.util import filter_by_triggers, get_objs_p4, trigger_matching_extra, trigger_object_matching_deep
 
 
 
 def sort_pairs(dtrpairs: ak.Array)->ak.Array:
+
     sorted_idx = ak.argsort(dtrpairs["0"].rawDeepTau2018v2p5VSjet, ascending=False)
     dtrpairs = dtrpairs[sorted_idx]
 
@@ -46,15 +71,9 @@ def sort_pairs(dtrpairs: ak.Array)->ak.Array:
 
 @selector(
     uses={
-        optional("Tau.pt"),
-        optional("Tau.pt_tautau"),
-        optional("Tau.mass"),
-        optional("Tau.mass_tautau"),
-        "Tau.eta", "Tau.phi",
-        "Tau.rawIdx", optional("Tau.genPartFlav"),
-        "Tau.charge", "Tau.rawDeepTau2018v2p5VSjet",
-        "Tau.idDeepTau2018v2p5VSjet", "Tau.idDeepTau2018v2p5VSe", "Tau.idDeepTau2018v2p5VSmu",
-        "Jet.pt","Jet.eta","Jet.phi","Jet.mass",
+        "Tau.{pt,eta,phi,mass,rawIdx,charge,rawDeepTau2018v2p5VSjet,idDeepTau2018v2p5VSjet,idDeepTau2018v2p5VSe,idDeepTau2018v2p5VSmu}",
+        optional("Tau.genPartFlav"),
+        "Jet.{pt,eta,phi,mass}",
     },
     exposed=False,
 )
@@ -73,15 +92,7 @@ def tautau_selection(
     tau_tagger_wps  = self.config_inst.x.deep_tau_info[tau_tagger].wp
     vs_e_wp         = self.config_inst.x.deep_tau_info[tau_tagger].vs_e["tautau"]
     vs_mu_wp        = self.config_inst.x.deep_tau_info[tau_tagger].vs_m["tautau"]
-    vs_jet_wp       = self.config_inst.x.deep_tau_info[tau_tagger].vs_j["tautau"]
 
-    # rename the {channel}_pt/mass to pt/mass
-    if self.dataset_inst.is_mc:
-        taus = ak.without_field(taus, "pt")
-        taus = ak.with_field(taus, taus.pt_tautau, "pt")
-        taus = ak.without_field(taus, "mass")
-        taus = ak.with_field(taus, taus.mass_tautau, "mass")
-    
     is_good_tau     = (
         (taus.pt > 20.0)
         #(taus.idDeepTau2018v2p5VSjet   >= tau_tagger_wps.vs_j[vs_jet_wp])
@@ -131,7 +142,9 @@ def tautau_selection(
 
     
     # match trigger objects for all pairs
-    leps_pair, trigIds, trigTypes, jet_idx = match_trigobjs_fullhad(leps_pair, trigger_results, events.Jet[jet_indices])
+    leps_pair, trigIds, trigTypes, jet_idx = match_trigobjs_fullhad(leps_pair,
+                                                                    trigger_results,
+                                                                    events.Jet[jet_indices])
 
     
     pair_selection_steps["tautau_after_trigger_matching"] = leps_pair["0"].pt >= 0.0
@@ -141,17 +154,10 @@ def tautau_selection(
     # take the 1st pair and 1st trigger id
     lep1 = lep1[:,:1]
     lep2 = lep2[:,:1]
-    #trigId = trigIds[:,:1]
-    #trigTypes = trigTypes[:,:1]
-
-
-    #trigIds_ = ak.sort(trigIds, ascending=False)[:,:1]
-    #is_ditaujet = trigIds_ == 15152 #         [ [], [True], [], [False] ]
-                                    # jetidx  [ [], [1],    [], [0]     ]
-
+                                    
     #has_jet_ = ak.num(jet_idx, axis=1) > 0
     ditau_ids = trigIds[trigIds == 15151]
-    ditaujet_ids =	trigIds[trigIds == 15152]
+    ditaujet_ids = trigIds[trigIds == 15152]
 
     has_jet = jet_idx >= 0
     a = ak.concatenate([(ditaujet_ids == 15152), has_jet], axis=1)
@@ -190,10 +196,19 @@ def tautau_selection(
     uses={
         select_base,
         tautau_selection,
+        extra_lepton_veto,
+        selzcand,
+        selzcandprod,
+        gentau_selection,
+        increment_stats,
+        custom_increment_stats,
+        jet_cleaning,
     },
     produces={
         select_base,
         tautau_selection,
+        selzcandprod,
+        gentau_selection,
         "channel_id",
         "cross_triggered",
         "cross_jet_triggered"
@@ -203,16 +218,18 @@ def tautau_selection(
 def select_tautau(
         self: Selector,
         events: ak.Array,
+        stats: defaultdict,
         **kwargs,
 ) -> tuple[ak.Array, SelectionResult]:
 
-    events,results,electron_indices,veto_electron_indices,muon_indices,veto_muon_indices,tau_indices,jet_indices = events[select_base](events)
+    events,results,electron_indices,veto_electron_indices,muon_indices,veto_muon_indices,tau_indices,jet_indices = self[select_base](events)
     
-    tautau_results, tautau_pair, tautau_trig_ids, tautau_trig_types, ditaujet_jet_indices = self[etau_selection](events,
-                                                                                                                 tau_indices,
-                                                                                                                 jet_indices,
-                                                                                                                 results,
-                                                                                                                 call_force=True)
+    tautau_results, tautau_pair, tautau_trig_ids, tautau_trig_types, ditaujet_jet_indices = self[tautau_selection](events,
+                                                                                                                   tau_indices,
+                                                                                                                   results,
+                                                                                                                   jet_indices,
+                                                                                                                   call_force=True)
+    
     results += tautau_results
 
     has_one_tautau_pair = ak.num(tautau_pair.rawIdx, axis=1) == 2
@@ -224,29 +241,27 @@ def select_tautau(
     results += match_tautau_pair_result
 
     # define channel ID
-    channel_id = ak.values_astype(ak.where(has_one_tautau_pair, self.config_inst.get_channel("tautau"), 0), np.uint8)
+    channel_id = ak.values_astype(ak.where(has_one_tautau_pair, self.config_inst.get_channel(self.config_inst.x.channel).id, 0), np.uint8)
     events = set_ak_column(events, "channel_id", channel_id)
     
     
     # tau
-    cross_tau_triggered = ak.any(tautau_trigger_types == 'cross_tau_tau', axis=1)
-    cross_tau_jet_triggered  = ak.any(tautau_trigger_types == 'cross_tau_tau_jet', axis=1)
+    cross_tau_triggered = ak.any(tautau_trig_types == 'cross_tau_tau', axis=1)
+    cross_tau_jet_triggered  = ak.any(tautau_trig_types == 'cross_tau_tau_jet', axis=1)
 
     
     events = set_ak_column(events, "cross_triggered", cross_tau_triggered)
     events = set_ak_column(events, "cross_jet_triggered",  cross_tau_jet_triggered)
 
-    Zcands = tautau_pair[:,None]
-    
     events, extra_lepton_veto_results = self[extra_lepton_veto](events,
-                                                                veto_ele_indices,
+                                                                veto_electron_indices,
                                                                 veto_muon_indices,
-                                                                Zcands)
+                                                                tautau_pair)
     results += extra_lepton_veto_results
     
     # Zcand results
-    events, Zcand_array, Zcand_results = self[zcand](events, Zcands)
-    results += Zcand_results
+    events, zcand_array, zcand_results = self[selzcand](events, tautau_pair)
+    results += zcand_results
 
     
     # Zcand prod results
@@ -254,9 +269,18 @@ def select_tautau(
     # Here, inside hcandprod, the replacement of raw
     # taus by calibrated taus takes place
     # -------------------------------------------- #
-    events, Zcandprod_results = self[zcandprod](events, Zcand_array)
-    results += Zcandprod_results
+    events, zcandprod_results = self[selzcandprod](events, zcand_array)
+    results += zcandprod_results
 
+    events, jet_clean_result, _ = self[jet_cleaning](events,
+                                                     jet_indices,
+                                                     results,
+                                                     ditaujet_jet_indices,
+                                                     #call_force=True,
+                                                     **kwargs)
+    results += jet_clean_result
+
+    
 
     # gen particles info
     # ############################################ #
@@ -276,35 +300,12 @@ def select_tautau(
     # combined event selection after all steps
     event_sel = reduce(and_, results.steps.values())
     results.event = event_sel
-
-
-    outliers_mask_for_stitching = None
-    
-    if self.process_ids_dy is not None:
-        logger.warning("DY stitching is ON : AGAIN")
-        events, outliers_mask_for_stitching = self[self.process_ids_dy](events, **kwargs)
-    elif self.process_ids_w is not None:
-        logger.warning("W stitching is ON : AGAIN")
-        events, outliers_mask_for_stitching = self[self.process_ids_w](events, **kwargs)
-    else:
-        events = self[process_ids](events, **kwargs)
-
-    if outliers_mask_for_stitching is not None:
-        n_outliers = ak.sum(outliers_mask_for_stitching)
-        if n_outliers > 0:
-            logger.warning(f"{self.dataset_inst} has {ak.sum(outliers_mask_for_stitching)} outlier events. Removing those events only")
-        outliers_result_for_stitching = SelectionResult(
-            steps = {"reject_stitching_outliers": ~outliers_mask_for_stitching}
-        )
-        results += outliers_result_for_stitching
-
     
     events, results = self[custom_increment_stats]( 
         events,
         results,
         stats,
     )
-
 
     weight_map = {
         "num_filtered_events": Ellipsis,
@@ -328,14 +329,24 @@ def select_tautau(
         #group_combinations.append(("process"))
 
     events, results = self[increment_stats](
-        events,
-        results,
-        stats,
+        events=events,
+        results=results,
+        stats=stats,
         weight_map=weight_map,
         group_map=group_map,
         #group_combinations=group_combinations,
         **kwargs,
     )
+
+
+    results += SelectionResult(
+        objects = {
+            "Tau" : {
+                "Tau": tautau_pair.rawIdx,
+            }
+        },
+    )
+    
     
     # inspect cuts
     if self.config_inst.x.verbose.selection.main:
@@ -343,62 +354,9 @@ def select_tautau(
                    results,
                    self.config_inst.x.triggers)
 
-        return events, SelectionResult(steps = results.steps,
-                                       objects = {
-                                           "Tau" : {
-                                               "Tau": etau_pair.rawIdx,
-                                           },
-                                       },
-                                       )
-    
 
-
-@select_tautau.init
-def select_tautau_init(self: Selector) -> None:
-    if getattr(self, "dataset_inst", None) is None:
-        return
-
-    self.process_ids_dy: process_ids_dy | None = None
     #from IPython import embed; embed()
-    if self.dataset_inst.has_tag("is_dy_m50"):
-        if self.config_inst.x.allow_dy_stitching:
-            #logger.warning("DY stitching is ON")
-            #print(f"stitching: {self.config_inst.x.dy_stitching.items()}")
-            # check if this dataset is covered by any dy id producer
-            for name, dy_cfg in self.config_inst.x.dy_stitching.items():
-                #print(f"dataset : {name}, {dy_cfg}")
-                dataset_inst = dy_cfg["inclusive_dataset"]
-                # the dataset is "covered" if its process is a subprocess of that of the dy dataset
-                if dataset_inst.has_process(self.dataset_inst.processes.get_first()):
-                    self.process_ids_dy = process_ids_dy.derive(f"process_ids_dy_{name}", cls_dict={
-                        "dy_inclusive_dataset": dataset_inst,
-                        "dy_leaf_processes": dy_cfg["leaf_processes"],
-                    })
 
-                    # add it as a dependency
-                    self.uses.add(self.process_ids_dy)
-                    self.produces.add(self.process_ids_dy)
-                    
-                    # stop after the first match
-                    break
-            
-    self.process_ids_w: process_ids_w | None = None
-    if self.dataset_inst.has_tag("is_w"):
-        if self.config_inst.x.allow_w_stitching:
-            #logger.warning("W stitching is ON")
-            # check if this dataset is covered by any dy id producer
-            for name, w_cfg in self.config_inst.x.w_stitching.items():
-                dataset_inst = w_cfg["inclusive_dataset"]
-                # the dataset is "covered" if its process is a subprocess of that of the dy dataset
-                if dataset_inst.has_process(self.dataset_inst.processes.get_first()):
-                    self.process_ids_w = process_ids_w.derive(f"process_ids_w_{name}", cls_dict={
-                        "w_inclusive_dataset": dataset_inst,
-                        "w_leaf_processes": w_cfg["leaf_processes"],
-                    })
 
-                    # add it as a dependency
-                    self.uses.add(self.process_ids_w)
-                    self.produces.add(self.process_ids_w)
-
-                    # stop after the first match
-                    break
+    
+    return events, results

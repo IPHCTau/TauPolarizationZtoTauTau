@@ -8,31 +8,12 @@
 import law
 import order as od
 
-from columnflow.config_util import add_category, create_category_combinations
 from zttpol.util import call_once_on_config
+from columnflow.config_util import (
+    add_category, create_category_combinations, CategoryGroup
+)
 
 logger = law.logger.get_logger(__name__)
-
-
-# ############################################################### #
-# To create combinations of categories                            #
-# the entire root -> leaf categories will be in the category_ids  #
-# other combinatorics will be produced in createHistograms task,  #
-# if mentioned                                                    #
-# ############################################################### #
-def name_fn(root_categories):
-    catlist = [cat.name for cat in root_categories.values() if cat]
-    catname = "__".join(cat.name for cat in root_categories.values() if cat)
-    return catname
-
-def kwargs_fn(root_categories):
-    return {
-        "id": sum([c.id for c in root_categories.values()]),
-        #"label": ",".join([c.label for c in root_categories.values()]),
-        "label": "+".join([c.label for c in root_categories.values()]),
-        "tags": set.union(*[cat.tags for cat in root_categories.values() if cat]),
-    }
-
 
 
 
@@ -111,55 +92,13 @@ def add_DM_categories(config: od.Config) -> None:
     add_category(config, name="a1dm10_a1dm11", id=19, selection="cat_a1dm10_a1dm11",   label=r"$\tau_{h}\to a_{1}(3\pi-0\pi^{0})-\tau_{h}\to a_{1}(3\pi-1\pi^{0})$",   tags={"a1DM10_a1DM11"})  # 
     add_category(config, name="a1dm11_a1dm11", id=20, selection="cat_a1dm11_a1dm11",   label=r"$\tau_{h}\to a_{1}(3\pi-1\pi^{0})-\tau_{h}\to a_{1}(3\pi-1\pi^{0})$",   tags={"a1DM11_a1DM11"})  # 
 
-
-
-    
-
-@call_once_on_config()
-def build_categories(config: od.Config) -> None:
-    categories = {
-        "channel": [config.get_category("tautau")],
-        "RorF"   : [config.get_category("real_1")],
-        "abcd"   : [
-            config.get_category("hadA"),  config.get_category("hadB"),
-            config.get_category("hadA0"), config.get_category("hadB0"),
-            config.get_category("hadC0"), config.get_category("hadD0"),
-            config.get_category("hadC"),  config.get_category("hadD"),
-        ],
-        "cp"     : [
-            config.get_category("pi_pi"),
-            config.get_category("pi_rho"),
-            config.get_category("pi_a1dm2"),
-            config.get_category("pi_a1dm10"),
-            config.get_category("pi_a1dm11"),
-            config.get_category("rho_rho"),
-            config.get_category("rho_a1dm2"),
-            config.get_category("rho_a1dm10"),
-            config.get_category("rho_a1dm11"),
-            config.get_category("a1dm2_a1dm10"),
-            config.get_category("a1dm2_a1dm11"),
-            config.get_category("a1dm10_a1dm10"),
-            config.get_category("a1dm10_a1dm11"),
-            config.get_category("a1dm11_a1dm11"),
-        ],
-    }
-    
-    logger.info("tautau_categories")
-    n = create_category_combinations(config,
-                                     categories,
-                                     name_fn=name_fn,
-                                     kwargs_fn=kwargs_fn,
-                                     skip_existing=False)
-    logger.info(f"{n} categories have been created")
-
-
     
 # ################### #
 # main categorization #
 # ################### #
 
 @call_once_on_config()    
-def add_tautau_categories(config: od.Config) -> None:
+def add_categories(config: od.Config) -> None:
     """
     Adds all categories to a *config*.
     """
@@ -178,7 +117,44 @@ def add_tautau_categories(config: od.Config) -> None:
 
     #add_classifier_categories(config)
     
-    build_categories(config)
+    # ############################################################### #
+    # To create combinations of categories                            #
+    # the entire root -> leaf categories will be in the category_ids  #
+    # other combinatorics will be produced in createHistograms task,  #
+    # if mentioned                                                    #
+    # ############################################################### #
+
+    def name_fn(categories: dict[str, od.Category]) -> str:
+        return "__".join(cat.name for cat in categories.values() if cat)
 
 
+    def kwargs_fn(categories: dict[str, od.Category]):
+        return {
+            "id": sum([c.id for c in categories.values()]),
+            "label": "+".join([c.label for c in categories.values()]),
+            "tags": set.union(*[cat.tags for cat in categories.values() if cat]),
+        }
 
+
+    main_categories = {
+        "channel": CategoryGroup(['tautau'], is_complete=True, has_overlap=False),
+        "RorF"   : CategoryGroup(['real_1'], is_complete=False, has_overlap=False),
+        "abcd"   : CategoryGroup(['hadA','hadB','hadA0','hadB0','hadC0','hadD0','hadC','hadD'], is_complete=True, has_overlap=False),
+        "cp"     : CategoryGroup(['pi_pi','pi_rho','pi_a1dm2','pi_a1dm10','pi_a1dm11',
+                                  'rho_rho','rho_a1dm2','rho_a1dm10','rho_a1dm11',
+                                  'a1dm2_a1dm10','a1dm2_a1dm11',
+                                  'a1dm10_a1dm10','a1dm10_a1dm11',
+                                  'a1dm11_a1dm11'], is_complete=True, has_overlap=False),
+    }
+
+    create_category_combinations(config=config,
+                                 categories=main_categories,
+                                 name_fn=name_fn,
+                                 parent_mode="safe",
+                                 kwargs_fn=kwargs_fn,
+                                 skip_existing=False)
+    
+
+    all_cats = [cat.name for cat, _, _ in config.walk_categories()]
+    logger.warning(f"{len(all_cats)} categories created for tautau channel")
+    

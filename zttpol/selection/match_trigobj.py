@@ -2,7 +2,7 @@ import law
 from columnflow.selection import SelectionResult
 from columnflow.util import maybe_import
 
-from zttpol.util import filter_by_triggers, get_objs_p4, trigger_matching_extra, trigger_object_matching_deep
+from zttpol.util import filter_by_triggers, get_objs_p4, trigger_matching_extra, trigger_object_matching_deep, trigger_object_matching_jets_deep
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")

@@ -11,7 +11,7 @@ import functools
 
 from columnflow.calibration import Calibrator, calibrator
 from columnflow.calibration.cms.muon import muon_sr
-from columnflow.calibration.cms.tau import tec
+#from columnflow.calibration.cms.tau import tec
 
 from columnflow.columnar_util import set_ak_column
 from columnflow.columnar_util import optional_column as optional
@@ -22,8 +22,8 @@ from columnflow.production.util import attach_coffea_behavior
 from columnflow.util import maybe_import
 
 from zttpol.calibration.calibrate_base import calibrate_base
-from zttpol.calibration.electron import electron_smearing_scaling
-from zttpol.calibration.tau import tau_energy_scale
+#from zttpol.calibration.tau import tau_energy_scale
+from zttpol.calibration.tau_cf import tec
 
 from zttpol.util import IF_RUN2, IF_RUN3
 
