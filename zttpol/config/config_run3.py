@@ -176,6 +176,7 @@ def add_config (ana: od.Analysis,
         # --- LO --- #
         "wj_incl_madgraph",
         ##Drell-Yan
+        "dy_lep_m50_madgraph",
         "dy_lep_m50_amcatnlo",
         "dy_2tau_m50_0j_amcatnlo",
         "dy_2tau_m50_1j_amcatnlo",
@@ -1781,7 +1782,7 @@ def add_config (ana: od.Analysis,
 
 
     cfg.x.extra_tags = DotDict.wrap({
-        "genmatch"       : False,
+        "genmatch"       : True,
     })
 
 

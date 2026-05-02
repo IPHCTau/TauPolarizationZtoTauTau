@@ -55,7 +55,7 @@ logger = law.logger.get_logger(__name__)
         #ff_weight,
         #classify_events,
         reArrangeDecayProducts,
-        #ProduceDetPhiCP,
+        ProduceDetPhiCP,
         IF_GENMATCH(reArrangeGenDecayProducts),
         #IF_GENMATCH(ProduceGenPhiCP),
         apply_fastMTT,
@@ -67,7 +67,7 @@ logger = law.logger.get_logger(__name__)
         #IF_DATASET_IS_SIGNAL(tauspinner_weights),
         #ff_weight,
         #classify_events,
-        #ProduceDetPhiCP,
+        ProduceDetPhiCP,
         #IF_GENMATCH(ProduceGenPhiCP),
         apply_fastMTT,
     },
@@ -86,7 +86,7 @@ def produce_tautau(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     # -------- For PhiCP -------- #
     # ########################### #
     events, P4_dict = self[reArrangeDecayProducts](events)
-    #events   = self[ProduceDetPhiCP](events, P4_dict)
+    events   = self[ProduceDetPhiCP](events, P4_dict)
     
     if self.config_inst.x.extra_tags.genmatch:
         events, P4_gen_dict = self[reArrangeGenDecayProducts](events)
