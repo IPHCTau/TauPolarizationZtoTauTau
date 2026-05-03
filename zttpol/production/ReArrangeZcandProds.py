@@ -312,12 +312,12 @@ def reArrangeDecayProducts(
 
     #from IPython import embed; embed()
 
-    return events, {"p4h1"       : p4_zcand1, 
-                    "p4h1pi"     : p4_zcand1_pi, 
-                    "p4h1pi0"    : p4_zcand1_pi0, 
-                    "p4h2"       : p4_zcand2, 
-                    "p4h2pi"     : p4_zcand2_pi, 
-                    "p4h2pi0"    : p4_zcand2_pi0}
+    return events, {"p4z1"       : p4_zcand1, 
+                    "p4z1pi"     : p4_zcand1_pi, 
+                    "p4z1pi0"    : p4_zcand1_pi0, 
+                    "p4z2"       : p4_zcand2, 
+                    "p4z2pi"     : p4_zcand2_pi, 
+                    "p4z2pi0"    : p4_zcand2_pi0}
 
 @producer(
     uses={
@@ -378,9 +378,9 @@ def reArrangeGenDecayProducts(
 
     #from IPython import embed; embed()
 
-    return events, {"p4h1"        : p4_zcand1, 
-                    "p4h1pi"      : p4_zcand1_pi, 
-                    "p4h1pi0"     : p4_zcand1_pi0, 
-                    "p4h2"        : p4_zcand2, 
-                    "p4h2pi"      : p4_zcand2_pi, 
-                    "p4h2pi0"     : p4_zcand2_pi0}
+    return events, {"p4z1"        : p4_zcand1, 
+                    "p4z1pi"      : p4_zcand1_pi, 
+                    "p4z1pi0"     : p4_zcand1_pi0, 
+                    "p4z2"        : p4_zcand2, 
+                    "p4z2pi"      : p4_zcand2_pi, 
+                    "p4z2pi0"     : p4_zcand2_pi0}

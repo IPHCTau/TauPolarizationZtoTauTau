@@ -34,12 +34,7 @@ logger = law.logger.get_logger(__name__)
     uses={
         # nano columns
         "zcand.*", "channel_id",
-        "PuppiMET.pt", "PuppiMET.phi", "PuppiMET.covXX", "PuppiMET.covXY", "PuppiMET.covYY",
-    },
-    produces={
-        # new columns
-        "zcand.{pt_fastMTT,eta_fastMTT,phi_fastMTT,mass_fastMTT}",
-        "zcand_invm_fastMTT",
+        "PuppiMET.{pt,phi,covXX,covXY,covYY}",
     },
 )
 def apply_fastMTT(
@@ -212,12 +207,15 @@ def apply_fastMTT(
         logger.critical("Set [cfg.x.run_fastMTT = True] in the main config to make fastMTT run ... setting dummy variables as output")
 
 
-    events = set_ak_column(events, "zcand.pt_fastMTT",   zcand_pt_fastMTT)
-    events = set_ak_column(events, "zcand.eta_fastMTT",  zcand_eta_fastMTT)
-    events = set_ak_column(events, "zcand.phi_fastMTT",  zcand_phi_fastMTT)
-    events = set_ak_column(events, "zcand.mass_fastMTT", zcand_mass_fastMTT)        
-    events = set_ak_column_f32(events, "zcand_invm_fastMTT", mass_h)
-        
-    return events
+    #events = set_ak_column(events, "zcand.pt_fastMTT",   zcand_pt_fastMTT)
+    #events = set_ak_column(events, "zcand.eta_fastMTT",  zcand_eta_fastMTT)
+    #events = set_ak_column(events, "zcand.phi_fastMTT",  zcand_phi_fastMTT)
+    #events = set_ak_column(events, "zcand.mass_fastMTT", zcand_mass_fastMTT)        
+    #events = set_ak_column_f32(events, "zcand_invm_fastMTT", mass_h)
+
+
+    
+    
+    return events, zcand_pt_fastMTT, mass_h
 
 

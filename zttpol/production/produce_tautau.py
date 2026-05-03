@@ -17,7 +17,7 @@ from columnflow.columnar_util import optional_column as optional
 
 from columnflow.config_util import get_events_from_categories
 from zttpol.production.ReArrangeZcandProds import reArrangeDecayProducts, reArrangeGenDecayProducts
-from zttpol.production.PhiCP_Producer import ProduceDetPhiCP, ProduceGenPhiCP
+from zttpol.production.ProduceObservables import ProduceRecoObservables, ProduceGenObservables
 #from zttpol.production.weights import tauspinner_weight
 #from zttpol.production.extra_weights import ff_weight, classify_events
 
@@ -55,9 +55,9 @@ logger = law.logger.get_logger(__name__)
         #ff_weight,
         #classify_events,
         reArrangeDecayProducts,
-        #ProduceDetPhiCP,
+        ProduceRecoObservables,
         IF_GENMATCH(reArrangeGenDecayProducts),
-        #IF_GENMATCH(ProduceGenPhiCP),
+        IF_GENMATCH(ProduceGenObservables),
         apply_fastMTT,
     },
     produces={
@@ -67,9 +67,9 @@ logger = law.logger.get_logger(__name__)
         #IF_DATASET_IS_SIGNAL(tauspinner_weights),
         #ff_weight,
         #classify_events,
-        #ProduceDetPhiCP,
-        #IF_GENMATCH(ProduceGenPhiCP),
-        apply_fastMTT,
+        ProduceRecoObservables,
+        IF_GENMATCH(ProduceGenObservables),
+        #apply_fastMTT,
     },
 )
 def produce_tautau(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
@@ -79,18 +79,18 @@ def produce_tautau(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     # ################## #
     #     Run FastMTT    #
     # ################## #
-    logger.info(" >>>--- FastMTT-Wiktors --->>> [Not as fast as you think]")
-    events = self[apply_fastMTT](events, run_fmtt=self.config_inst.x.enable_fastMTT)
+    #logger.info(" >>>--- FastMTT-Wiktors --->>> [Not as fast as you think]")
+    #events = self[apply_fastMTT](events, run_fmtt=self.config_inst.x.enable_fastMTT)
 
     # ########################### #
     # -------- For PhiCP -------- #
     # ########################### #
     events, P4_dict = self[reArrangeDecayProducts](events)
-    #events   = self[ProduceDetPhiCP](events, P4_dict)
+    events   = self[ProduceRecoObservables](events, P4_dict)
     
     if self.config_inst.x.extra_tags.genmatch:
         events, P4_gen_dict = self[reArrangeGenDecayProducts](events)
-        #events = self[ProduceGenPhiCP](events, P4_gen_dict) 
+        events = self[ProduceGenObservables](events, P4_gen_dict) 
 
     
     #logger.info(" >>>--- Evaluate Classifier Models (IC) --->>> [In extra_weights.py and processes.py]")

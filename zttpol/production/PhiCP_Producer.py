@@ -12,6 +12,9 @@ from zttpol.production.PhiCP_Estimator import GetPhiCP
 #from httcp.production.angular_features import ProduceDetCosPsi, ProduceGenCosPsi
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column, optional_column as optional
 
+from zttpol.production.helper import getlistofobservables
+
+
 import law
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -63,6 +66,7 @@ def ProducePhiCP(
     #esplit_h2 = ak.fill_none(ak.firsts(energy_split_h2 > 0.2, axis=1))
 
     dummyPhiCP = ak.from_regular(ak.values_astype(events.event[:,None][:,:0], np.float32))
+    dummy = ak.from_regular(ak.values_astype(events.event[:,None][:,:0], np.float32))
 
     if channel == "emu":
 
@@ -119,14 +123,26 @@ def ProducePhiCP(
 
     elif channel == "mutau":
 
-        #from IPython import embed; embed()
+        variables = getlistofobservables()
+        dummy_observables = ak.Record({var: dummy for var in variables})
+
+
         
         # mutau
-        mask_mu_pi     = is_mu(p4h1)  &   is_pi(p4h2)
-        mask_mu_rho    = is_mu(p4h1)  &   is_rho(p4h2)
-        mask_mu_a1DM2  = is_mu(p4h1)  &   is_a1DM2(p4h2)
-        mask_mu_a1DM10 = is_mu(p4h1)  &   is_a1DM10(p4h2)
-        mask_mu_a1DM11 = is_mu(p4h1)  &   is_a1DM11(p4h2)    
+        #mask_mu_pi     = is_pi(p4h2)
+        #mask_mu_rho    = is_rho(p4h2)
+        #mask_mu_a1DM2  = is_a1DM2(p4h2)
+        #mask_mu_a1DM10 = is_a1DM10(p4h2)
+        #mask_mu_a1DM11 = is_a1DM11(p4h2)    
+
+        mask_mu_pi     = is_pi(p4h2)
+        mask_mu_rho    = (is_rho(p4h2)  | is_a1DM2(p4h2))
+        mask_mu_a1     = (is_a1DM10(p4h2) | is_a1DM11(p4h2))
+        
+
+        from IPython import embed; embed()
+        
+
         
         logger.info("IP-IP")
         # -- e-pi
@@ -191,6 +207,7 @@ def ProducePhiCP(
         mask_a1DM11_a1DM10   = is_a1DM11(p4h1) &  is_a1DM10(p4h2)
         
         mask_a1DM11_a1DM11   = is_a1DM11(p4h1) &  is_a1DM11(p4h2)
+
 
         
         logger.info("IP-IP")
