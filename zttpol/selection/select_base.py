@@ -23,25 +23,52 @@ from columnflow.selection.cms.jets import jet_veto_map
 
 from columnflow.production.processes import process_ids
 from columnflow.production.util import attach_coffea_behavior
-##from columnflow.production.cms.top_pt_weight import gen_parton_top
 
-from columnflow.util import maybe_import
+from columnflow.util import maybe_import, DotDict
 from columnflow.columnar_util import optional_column as optional
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
-from columnflow.columnar_util import IF_DATA, IF_MC
+from columnflow.columnar_util import (
+    EMPTY_FLOAT, Route, set_ak_column, IF_DATA, IF_MC
+)
+from columnflow.hist_util import create_hist_from_variables, fill_hist
 
 from zttpol.selection.physics_objects import (
-    muon_selection, electron_selection, tau_selection, jet_selection, genZ_selection
+    muon_selection,
+    electron_selection,
+    tau_selection,
+    jet_selection,
+    genZ_selection
 )
-
 from zttpol.selection.lepton_veto import tau_veto_from_dy
 from zttpol.selection.trigger import trigger_selection
-#from zttpol.selection.event_category import get_categories
 
 from zttpol.production.columnvalid import make_column_valid
 
-from zttpol.util import filter_by_triggers, get_objs_p4, trigger_object_matching_deep, IF_DATASET_IS_DY, IF_DATASET_IS_W, IF_DATASET_IS_SIGNAL
+from zttpol.util import (
+    IF_DATASET_IS_DY,
+    IF_DATASET_IS_W,
+    IF_DATASET_IS_SIGNAL,
+    IF_RUN2, IF_RUN3,
+    IF_DATASET_HAS_LHE_WEIGHTS
+)
+from columnflow.production.cms.jet import jet_id
+from columnflow.production.cms.pileup import pu_weight
+#from columnflow.production.cms.pdf import (
+#    pdf_weights,
+#    pdf_weights_raw
+#)
+from columnflow.production.cms.scale import (
+    murmuf_weights,
+    murmuf_weights_raw,
+    murmuf_envelope_weights
+)
+from columnflow.production.cms.parton_shower import ps_weights
 
+from zttpol.production.helper import jet_id_manual
+#from zttpol.production.helper import assign_helicity
+#from zttpol.production.sample_split_helicity import split_dy
+from zttpol.production.weights import scale_mc_weight
+
+from columnflow.types import TYPE_CHECKING
 
 logger = law.logger.get_logger(__name__)
 
@@ -49,52 +76,58 @@ np = maybe_import("numpy")
 ak = maybe_import("awkward")
 coffea = maybe_import("coffea")
 maybe_import("coffea.nanoevents.methods.nanoaod")
+hist = maybe_import("hist")
 
 
 
-
-# exposed selector (can be invoked from the command line)
 @selector(
     uses={
-        #"event",
-        # selectors / producers called within _this_ selector
         attach_coffea_behavior,
         json_filter, 
         met_filters, 
         process_ids,
         trigger_selection,
-        ##IF_DATASET_IS_DY(genZ_selection),
         IF_MC(genZ_selection),
         muon_selection, 
         electron_selection, 
         tau_selection, 
         jet_selection,
-        ##jet_cleaning,
-        #get_categories,
-        #extra_lepton_veto, 
-        ##double_lepton_veto,
         tau_veto_from_dy,
-        jet_veto_map,
+        IF_RUN3(jet_veto_map),
+        IF_RUN2(jet_id_manual),
+        IF_RUN3(jet_id),
         "PuppiMET.{pt,phi}",
         "Jet.{pt,eta,phi,neEmEF,chEmEF}",
         "Flag.ecalBadCalibFilter",
         make_column_valid,
+        IF_MC(pu_weight),
+        IF_MC(ps_weights),
+        #IF_DATASET_HAS_LHE_WEIGHTS(pdf_weights, pdf_weights_raw,
+        #                           murmuf_weights, murmuf_weights_raw, murmuf_envelope_weights),
+        IF_DATASET_HAS_LHE_WEIGHTS(murmuf_weights, murmuf_weights_raw, murmuf_envelope_weights),
+        #assign_helicity,
+        #split_dy,
+        IF_MC(scale_mc_weight),
     },
     produces={
-        # selectors / producers whose newly created columns should be kept
         trigger_selection,
-        ##IF_DATASET_IS_DY(genZ_selection),
         IF_MC(genZ_selection),
+        IF_RUN2(jet_id_manual),
+        IF_RUN3(jet_id),
         muon_selection, 
         electron_selection, 
         tau_selection, 
         jet_selection,
-        ##jet_cleaning,
-        #get_categories, 
         process_ids,
-        #extra_lepton_veto, 
-        ##double_lepton_veto,
         make_column_valid,
+        IF_MC(pu_weight),
+        IF_MC(ps_weights),
+        #IF_DATASET_HAS_LHE_WEIGHTS(pdf_weights, pdf_weights_raw,
+        #                           murmuf_weights, murmuf_weights_raw, murmuf_envelope_weights),
+        IF_DATASET_HAS_LHE_WEIGHTS(murmuf_weights, murmuf_weights_raw, murmuf_envelope_weights),        
+        #assign_helicity,
+        #split_dy,
+        IF_MC(scale_mc_weight),
     },
     exposed=False,
 )
@@ -102,20 +135,22 @@ def select_base(
     self: Selector,
     events: ak.Array,
     **kwargs,
-) -> tuple[ak.Array, SelectionResult]:
-    
+) -> tuple[ak.Array, ak.Array, SelectionResult]:
+
     # ensure coffea behaviors are loaded
     events = self[attach_coffea_behavior](events, **kwargs)
 
-    # prepare the selection results that are updated at every step
-    results = SelectionResult()
-
-    if self.dataset_inst.has_tag("is_dy_m50"):
-        events, tau_veto_result = self[tau_veto_from_dy](events, **kwargs)
-        results += tau_veto_result
+    # scale MC-weight : -1 or +1
+    if self.dataset_inst.is_mc:
+        events = self[scale_mc_weight](events, **kwargs)
     
-    results += SelectionResult(steps={"starts_with": np.ones(len(events), dtype=bool)})
-        
+    # no_sel
+    no_sel_mask = np.ones(len(events), dtype=bool)
+    
+    # prepare the selection results recommended to be updated at every step
+    results = SelectionResult()
+    results += SelectionResult(steps={"starts_with": no_sel_mask})
+
     # filter bad data events according to golden lumi mask
     if self.dataset_inst.is_data:
         events, json_filter_results = self[json_filter](events, **kwargs)
@@ -123,21 +158,35 @@ def select_base(
     else:
         results += SelectionResult(steps={"json": np.ones(len(events), dtype=bool)})
 
+    # if dy to 2 tau datasets are being used, veto the dy to 2 tau part from dy inclusive samples
+    if self.dataset_inst.has_tag("is_dy_lep") and self.dataset_inst.has_tag("drop_tautau_from_dy_incl"):
+        events, tau_veto_result = self[tau_veto_from_dy](events, **kwargs)
+        results += tau_veto_result
 
-    events, veto_result = self[jet_veto_map](events, **kwargs)
-    results += veto_result
+    # set JetID
+    if self.config_inst.campaign.x.run == 2:
+        events = self[jet_id_manual](events, **kwargs)
+    elif self.config_inst.campaign.x.run == 3:
+        events = self[jet_id](events, **kwargs)
+    else:
+        raise RuntimeError(f'wrong run : {self.config_inst.campaign.x.run}')
 
-    # ############################ #
-    #     met filter selection     #
-    # ############################ #
+    #from IPython import embed; embed()
+    
+    # jet veto map (only for Run 3)
+    if self.has_dep(jet_veto_map):
+        events, veto_result = self[jet_veto_map](events, **kwargs)
+        results += veto_result
+
+    # met filter
     events, met_filter_results = self[met_filters](events, **kwargs)
-    if self.dataset_inst.is_data:
-        # BadCalibrationFilter is meant to reject events with noise which are related to bad crystals in Ecal.
-        # The issue was present in some run ranges in data (end of 2022 & early 2023) only. The fraction of bad
-        # data in terms of lumi is small. So, one can ignore the recipe in MC.
-        # Also, DO NOT USE THIS FLAG AT ALL.
-        #BadCalibrationFilter = ak.values_astype(events.Flag.ecalBadCalibFilter, bool)
-        BadCalibrationFilter = events.event > 0 # all True
+    # extra met filter for Run 3 (applicable for 2022 & 2023 only)
+    if self.dataset_inst.is_data and (self.config_inst.campaign.x.run == 3):
+        # BadCalibrationFilter is meant to reject events with noise which are related to bad crystals in Ecal.  #
+        # The issue was present in some run ranges in data (end of 2022 & early 2023) only. The fraction of bad #
+        # data in terms of lumi is small. So, one can ignore the recipe in MC.                                  #
+        # Also, DO NOT USE THIS FLAG AT ALL.                                                                    #
+        BadCalibrationFilter = events.event > 0
         met = ak.with_name(events.PuppiMET, "PtEtaPhiMLorentzVector")
         jet = ak.with_name(events.Jet, "PtEtaPhiMLorentzVector")
         BadCalibrationFilter_perjet_mask = (
@@ -158,65 +207,97 @@ def select_base(
     results += met_filter_results    
     
     # trigger selection
-    events, trigger_results = self[trigger_selection](events, channel = self.config_inst.x.channel)
+    events, trigger_results = self[trigger_selection](events)
     results += trigger_results
     
     # Get genZ collection for Zpt reweighting
-    #if self.dataset_inst.has_tag("is_dy") or self.dataset_inst.has_tag("is_w") or self.dataset_inst.has_tag("is_signal"):
+    # todo: USE ONLY FOR PROCESSES INVOLVING W & Z
+    #if self.dataset_inst.has_tag("is_dy") or self.dataset_inst.has_tag("is_w"):
     if self.dataset_inst.is_mc:
         events = self[genZ_selection](events, **kwargs)
        
     # electron selection
-    # e.g. ele_idx: [ [], [0,1], [], [], [1,2] ] 
     events, ele_results, good_ele_indices, veto_ele_indices, dlveto_ele_indices = self[electron_selection](events,
-                                                                                                           #call_force=False,
                                                                                                            **kwargs)
     results += ele_results
 
     
     # muon selection
-    # e.g. mu_idx: [ [0,1], [], [1], [0], [] ] 
     events, muon_results, good_muon_indices, veto_muon_indices, dlveto_muon_indices = self[muon_selection](events,
-                                                                                                           #call_force=False,
                                                                                                            **kwargs)
     results += muon_results
 
 
     # tau selection
-    # e.g. tau_idx: [ [1], [0,1], [1,2], [], [0,1] ]
     events, tau_results, good_tau_indices = self[tau_selection](events,
-                                                                #call_force=True,
                                                                 **kwargs)
     results += tau_results
 
-
     # jet selection
     events, jet_results, jet_indices = self[jet_selection](events,
-                                                           #call_force=True,
                                                            **kwargs)
     results += jet_results
 
-    # -------- Sel : b-veto -------- #
-    # jet selection
-    # -------------------------------------------- #
-    # this is moved here, because now the jets are
-    # cleaned against the tau cadidates of hacnd
-    # -------------------------------------------- #
-    #events, jet_clean_result, ditaujet_jet_indices = self[jet_cleaning](events,
-    #                                                                    jet_indices,
-    #                                                                    jet_results,
-    #                                                                    ditaujet_jet_indices,
-    #                                                                    call_force=True, 
-    #                                                                    **kwargs)
-    #results += jet_clean_result
+    
+    # build nLepton mask
+    has_possible_pairs = events.event >= 0
+    if self.config_inst.x.channel == "emu":
+        has_possible_pairs = (ak.num(good_muon_indices, axis=1) > 0) & (ak.num(good_ele_indices, axis=1) > 0)
+    elif self.config_inst.x.channel == "etau":
+        has_possible_pairs = (ak.num(good_ele_indices, axis=1) > 0) & (ak.num(good_tau_indices, axis=1) > 0)
+    elif self.config_inst.x.channel == "mutau":
+        has_possible_pairs = (ak.num(good_muon_indices, axis=1) > 0) & (ak.num(good_tau_indices, axis=1) > 0)
+    elif self.config_inst.x.channel == "tautau":
+        has_possible_pairs = ak.num(good_tau_indices, axis=1) >= 2
+    elif self.config_inst.x.channel == "ee":
+        has_possible_pairs = ak.num(good_ele_indices, axis=1) >= 2
+    elif self.config_inst.x.channel == "mumu":
+        has_possible_pairs = ak.num(good_muon_indices, axis=1) >= 2  
+    else:
+        raise RuntimeError(f"Wrong Channel : {self.config_inst.x.channel}")
 
+    results += SelectionResult(steps={"at least 2 leptons": has_possible_pairs})
+
+    # generate processIDs
     events = self[process_ids](events, **kwargs)
 
-    events = self[make_column_valid](events)
+    #if self.dataset_inst.has_tag("is_dy_tautau"):
+    #    events = self[assign_helicity](events)
+    #    events = self[split_dy](events,**kwargs)
+
     
-    #print("Select_base done")
+    # take care of the NaN values in some coulmns
+    events = self[make_column_valid](events, debug=self.config_inst.x.verbose.selection.main)
+
+    # mc-only functions
+    if self.dataset_inst.is_mc:
+
+        # pdf weights
+        #for pdf_cls in [pdf_weights, pdf_weights_raw]:
+        #    if self.has_dep(pdf_cls):
+        #        events = self[pdf_cls](
+        #            events,
+        #            outlier_log_mode="debug",
+        #            invalid_weights_action="ignore" if self.dataset_inst.has_tag("partial_lhe_weights") else "raise",
+        #            **kwargs,
+        #        )
+
+        # renormalization/factorization scale weights
+        for murmuf_cls in [murmuf_weights, murmuf_weights_raw, murmuf_envelope_weights]:
+            if self.has_dep(murmuf_cls):
+                events = self[murmuf_cls](events, **kwargs)
+
+        # parton shower weights
+        events = self[ps_weights](events, invalid_weights_action="ignore_one", **kwargs)
+        
+        # pileup weights
+        events = self[pu_weight](events, **kwargs)
+
+
     
+    # to be used in the channel specific selectors
     return events, \
+        no_sel_mask, \
         results, \
         good_ele_indices, \
         veto_ele_indices, \

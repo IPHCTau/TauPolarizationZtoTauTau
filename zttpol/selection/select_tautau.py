@@ -2,6 +2,18 @@
 
 """
 Prepare h-Candidate from SelectionResult: selected lepton indices & channel_id [trigger matched] 
+Requirements:
+  select_base
+Workflow:
+  call base selector, get leptons, jets from there
+  mutau_selection : to get the µτ pair
+  assign channel id
+  save trigger info as new column
+  extra lepton veto
+  build Zcand i.e. assigning some properties
+  build ZandProds
+  save process ids for to be stitched datasets, if enabled
+  return events and save the electron and tau indices    
 """
 
 import law
@@ -11,14 +23,15 @@ from operator import and_
 from functools import reduce
 from collections import defaultdict, OrderedDict
 
-#from columnflow.production.processes import process_ids
 from columnflow.production.util import attach_coffea_behavior
 
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.selection.stats import increment_stats
-#from columnflow.selection.util import create_collections_from_masks
+#from columnflow.selection.stats import increment_stats
+
 from columnflow.util import maybe_import
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
+from columnflow.columnar_util import (
+    EMPTY_FLOAT, Route, set_ak_column, IF_DATA, IF_MC
+)
 from columnflow.columnar_util import optional_column as optional
 
 from zttpol.selection.physics_objects import (
@@ -26,17 +39,19 @@ from zttpol.selection.physics_objects import (
 )
 from zttpol.selection.select_base import select_base
 from zttpol.selection.lepton_veto import extra_lepton_veto
-from zttpol.selection.custom_stats import custom_increment_stats
 from zttpol.selection.match_trigobj import match_trigobjs_fullhad
 from zttpol.selection.zcand import selzcand, selzcandprod
 from zttpol.selection.debug import debug_main
+from zttpol.selection.stats import custom_increment_stats
 
-#from zttpol.production.stitching_NLO import process_ids_dy
-#from zttpol.production.stitching_LO import process_ids_w
-#from zttpol.production.extra_weights import scale_mc_weight
-
-from zttpol.util import transverse_mass
-from zttpol.util import IF_RUN2, IF_RUN3
+from zttpol.util import (
+    transverse_mass,
+    IF_DATASET_IS_DY,
+    IF_DATASET_IS_W,
+    IF_DATASET_IS_SIGNAL,
+    IF_RUN2, IF_RUN3,
+    IF_DATASET_HAS_LHE_WEIGHTS
+)
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -44,24 +59,25 @@ coffea = maybe_import("coffea")
 maybe_import("coffea.nanoevents.methods.nanoaod")
 
 
-#from zttpol.util import filter_by_triggers, get_objs_p4, trigger_matching_extra, trigger_object_matching_deep
 
 
+def sort_pairs(
+        dtrpairs: ak.Array,
+        tau_iso = "rawDeepTau2018v2p5VSjet"
+) -> ak.Array:
 
-def sort_pairs(dtrpairs: ak.Array)->ak.Array:
-
-    sorted_idx = ak.argsort(dtrpairs["0"].rawDeepTau2018v2p5VSjet, ascending=False)
+    sorted_idx = ak.argsort(dtrpairs["0"][tau_iso], ascending=False)
     dtrpairs = dtrpairs[sorted_idx]
 
     # if the deep tau val of tau-0 is the same for the first two pair
     where_same_iso_1 = ak.fill_none(
-        ak.firsts(dtrpairs["0"].rawDeepTau2018v2p5VSjet[:,:1], axis=1) == ak.firsts(dtrpairs["0"].rawDeepTau2018v2p5VSjet[:,1:2], axis=1),
+        ak.firsts(dtrpairs["0"][tau_iso][:,:1], axis=1) == ak.firsts(dtrpairs["0"][tau_iso][:,1:2], axis=1),
         False
     )
 
     # if so, sort the pairs according to the deep tau of the 2nd tau
     sorted_idx = ak.where(where_same_iso_1,
-                          ak.argsort(dtrpairs["1"].rawDeepTau2018v2p5VSjet, ascending=False),
+                          ak.argsort(dtrpairs["1"][tau_iso], ascending=False),
                           sorted_idx)
     dtrpairs = dtrpairs[sorted_idx]
     
@@ -86,20 +102,22 @@ def tautau_selection(
         **kwargs,
 ) -> tuple[SelectionResult, ak.Array, ak.Array]:
 
+    results = SelectionResult()
+    
     taus            = events.Tau[lep_indices]
-    # Extra channel specific selections on tau
-    tau_tagger      = self.config_inst.x.deep_tau_tagger
-    tau_tagger_wps  = self.config_inst.x.deep_tau_info[tau_tagger].wp
-    vs_e_wp         = self.config_inst.x.deep_tau_info[tau_tagger].vs_e["tautau"]
-    vs_mu_wp        = self.config_inst.x.deep_tau_info[tau_tagger].vs_m["tautau"]
 
+    # Extra channel specific selections on m or tau
+    vs_e_wp         = self.config_inst.x.tauIDWPs_config["DeepTau2018v2p5"].vs_e["tautau"]
+    vs_mu_wp        = self.config_inst.x.tauIDWPs_config["DeepTau2018v2p5"].vs_m["tautau"]
+    vs_jet_wp       = self.config_inst.x.tauIDWPs_config["DeepTau2018v2p5"].vs_j["tautau"]
+    
     is_good_tau     = (
         (taus.pt > 20.0)
-        #(taus.idDeepTau2018v2p5VSjet   >= tau_tagger_wps.vs_j[vs_jet_wp])
-        & (taus.idDeepTau2018v2p5VSe   >= tau_tagger_wps.vs_e[vs_e_wp])
-        & (taus.idDeepTau2018v2p5VSmu  >= tau_tagger_wps.vs_m[vs_mu_wp])
+        & (taus.idDeepTau2018v2p5VSe   >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_e[vs_e_wp])
+        & (taus.idDeepTau2018v2p5VSmu  >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_m[vs_mu_wp])
     )
-
+    # idDeepTau2018v2p5VSjet will be used in the categorization
+    
     taus = taus[is_good_tau]
 
     
@@ -110,18 +128,18 @@ def tautau_selection(
     leps_pair  = ak.combinations(taus, 2, axis=1)    
     lep1, lep2 = ak.unzip(leps_pair)
 
-    #from IPython import embed; embed()
+    npair = ak.num(lep1, axis=1)
+    results += SelectionResult(steps = {'tautau pairs pre pre-selection': npair >= 1})
     
     preselection = {
         #"tautau_tau1_iso"      : (lep1.idDeepTau2018v2p5VSjet >= tau_tagger_wps.vs_j[vs_jet_wp]),
         "tautau_is_pt_35"      : (lep1.pt > 35.0) & (lep2.pt > 35.0), # just changed 40.0 to 35.0 (19.12.2024)
         "tautau_is_eta_2p1"    : (np.abs(lep1.eta) < 2.1) & (np.abs(lep2.eta) < 2.1),
-        #"tautau_is_os"         : (lep1.charge * lep2.charge) < 0,
         "tautau_dr_0p5"        : (1*lep1).delta_r(1*lep2) > 0.5,  #deltaR(lep1, lep2) > 0.5,
-        "tautau_invmass_40"    : (1*lep1 + 1*lep2).mass > 40.0, # invariant_mass(lep1, lep2) > 40
+        #"tautau_invmass_40"    : (1*lep1 + 1*lep2).mass > 40.0, # invariant_mass(lep1, lep2) > 40
+        #"tautau_os"            : (lep1.charge * lep2.charge) < 0,
     }
 
-    
     good_pair_mask = lep1.rawIdx >= 0
     pair_selection_steps = {}
     category_selections = {}
@@ -135,26 +153,50 @@ def tautau_selection(
 
     # check nPairs
     npair = ak.num(leps_pair["0"], axis=1)
+    results += SelectionResult(steps = {'tautau pairs post trigobj match': npair >= 1})
     pair_selection_steps["tautau_before_trigger_matching"] = leps_pair["0"].pt >= 0.0
     
     # sort the pairs if many
     leps_pair = ak.where(npair > 1, sort_pairs(leps_pair), leps_pair)
-
     
-    # match trigger objects for all pairs
+    # match trigger objects for all pairs    
     leps_pair, trigIds, trigTypes, jet_idx = match_trigobjs_fullhad(leps_pair,
                                                                     trigger_results,
                                                                     events.Jet[jet_indices])
 
-    
+    npair = ak.num(leps_pair["0"], axis=1)
+    results += SelectionResult(steps = {'tautau pairs post trigobj match': npair >= 1})
     pair_selection_steps["tautau_after_trigger_matching"] = leps_pair["0"].pt >= 0.0
+    
+    """
+    trigIds = trigger_results.x.trigger_ids
+    trigTypes = trigger_results.x.trigger_types
+    #jet_idx = events.Jet[jet_indices]
+    """
     
     lep1, lep2 = ak.unzip(leps_pair)
 
     # take the 1st pair and 1st trigger id
     lep1 = lep1[:,:1]
     lep2 = lep2[:,:1]
-                                    
+
+    mask_ditau = trigTypes == "cross_tau_tau"
+    mask_ditaujet = trigTypes == "cross_tau_tau_jet"
+
+    ditau_type    = trigTypes[mask_ditau]
+    ditaujet_type = trigTypes[mask_ditaujet]
+    ditau_ids     = trigIds[mask_ditau]
+    ditaujet_ids  = trigIds[mask_ditaujet]
+
+    has_jet = jet_idx >= 0
+    a = ak.concatenate([(ditaujet_type == "cross_tau_tau_jet"), has_jet], axis=1)
+    b = ak.sum(a, axis=1) == 2
+    ditaujet_ids_matched = ak.where(b, ditaujet_ids, ditaujet_ids[:,:0])
+
+    trig_ids_matched = ak.concatenate([ditau_ids,ditaujet_ids_matched], axis=1)
+    trig_types_matched = trigTypes[trig_ids_matched > 0]
+    
+    """
     #has_jet_ = ak.num(jet_idx, axis=1) > 0
     ditau_ids = trigIds[trigIds == 15151]
     ditaujet_ids = trigIds[trigIds == 15152]
@@ -166,7 +208,7 @@ def tautau_selection(
 
     trig_ids_matched = ak.concatenate([ditau_ids,ditaujet_ids_matched], axis=1)
     trig_types_matched = trigTypes[trig_ids_matched > 0]
-    
+    """
     
     # rebuild the pair with the 1st one only
     leps_pair = ak.concatenate([lep1, lep2], axis=1)
@@ -179,16 +221,26 @@ def tautau_selection(
 
     #from IPython import embed; embed()
     
-
+    
+    npair = ak.num(leps_pair_matched.pt, axis=1)
+    results += SelectionResult(steps = {'tautau pairs post trigobj match': npair == 2})
+    pair_selection_steps["tautau_after_trigger_matching"] = leps_pair_matched.pt >= 0.0
+    
+    results += SelectionResult(aux=pair_selection_steps)
+    
     #return SelectionResult(
     #    aux = pair_selection_steps,
     #), leps_pair, trigIds, trigTypes
-
+    """
     return SelectionResult(
         aux = pair_selection_steps,
-    ), leps_pair_matched, trig_ids_matched, trig_types_matched, jet_idx
-
-
+    ), \
+    leps_pair,\
+    trigIds, \
+    trigTypes, \
+    jet_indices
+    """
+    return results,leps_pair_matched,trig_ids_matched,trig_types_matched,jet_idx
 
 
 
@@ -200,9 +252,9 @@ def tautau_selection(
         selzcand,
         selzcandprod,
         gentau_selection,
-        increment_stats,
         custom_increment_stats,
         jet_cleaning,
+        IF_MC("mc_weight"),
     },
     produces={
         select_base,
@@ -211,7 +263,7 @@ def tautau_selection(
         gentau_selection,
         "channel_id",
         "cross_triggered",
-        "cross_jet_triggered"
+        IF_RUN3("cross_jet_triggered"),
     },
     exposed=True,
 )
@@ -222,36 +274,45 @@ def select_tautau(
         **kwargs,
 ) -> tuple[ak.Array, SelectionResult]:
 
-    events,results,electron_indices,veto_electron_indices,muon_indices,veto_muon_indices,tau_indices,jet_indices = self[select_base](events)
+    events,\
+        no_sel,\
+        results,\
+        electron_indices,\
+        veto_electron_indices,\
+        muon_indices,\
+        veto_muon_indices,\
+        tau_indices,\
+        jet_indices = self[select_base](events)
     
     tautau_results, tautau_pair, tautau_trig_ids, tautau_trig_types, ditaujet_jet_indices = self[tautau_selection](events,
                                                                                                                    tau_indices,
                                                                                                                    results,
                                                                                                                    jet_indices,
                                                                                                                    call_force=True)
+    #from IPython import embed; embed()
+
     
     results += tautau_results
 
     has_one_tautau_pair = ak.num(tautau_pair.rawIdx, axis=1) == 2
-    match_tautau_pair_result = SelectionResult(
-        steps = {
-            "has_one_tautau_pair"  : has_one_tautau_pair,
-        },
-    )
-    results += match_tautau_pair_result
-
+    results += SelectionResult(steps={"one tautau pair (sanity check)": has_one_tautau_pair})
+    
     # define channel ID
     channel_id = ak.values_astype(ak.where(has_one_tautau_pair, self.config_inst.get_channel(self.config_inst.x.channel).id, 0), np.uint8)
     events = set_ak_column(events, "channel_id", channel_id)
     
+    results += SelectionResult(steps={"fall into tautau channel (sanity check)": events.channel_id == self.config_inst.get_channel(self.config_inst.x.channel).id})
+
     
     # tau
+    #from IPython import embed; embed()
     cross_tau_triggered = ak.any(tautau_trig_types == 'cross_tau_tau', axis=1)
     cross_tau_jet_triggered  = ak.any(tautau_trig_types == 'cross_tau_tau_jet', axis=1)
 
     
     events = set_ak_column(events, "cross_triggered", cross_tau_triggered)
-    events = set_ak_column(events, "cross_jet_triggered",  cross_tau_jet_triggered)
+    if self.config_inst.campaign.x.run == 3:
+        events = set_ak_column(events, "cross_jet_triggered",  cross_tau_jet_triggered)
 
     events, extra_lepton_veto_results = self[extra_lepton_veto](events,
                                                                 veto_electron_indices,
@@ -272,14 +333,15 @@ def select_tautau(
     events, zcandprod_results = self[selzcandprod](events, zcand_array)
     results += zcandprod_results
 
+    nditaujets = ak.sum(ak.num(ditaujet_jet_indices, axis=1))
+    
     events, jet_clean_result, _ = self[jet_cleaning](events,
                                                      jet_indices,
                                                      results,
-                                                     ditaujet_jet_indices,
-                                                     #call_force=True,
+                                                     ditaujet_jet_indices if nditaujets > 0 else None,
                                                      **kwargs)
     results += jet_clean_result
-
+    
     
 
     # gen particles info
@@ -301,49 +363,25 @@ def select_tautau(
     event_sel = reduce(and_, results.steps.values())
     results.event = event_sel
     
-    events, results = self[custom_increment_stats]( 
-        events,
-        results,
-        stats,
-    )
 
-    weight_map = {
-        "num_filtered_events": Ellipsis,
-        "num_events_selected": event_sel,
-    }
-    group_map = {}
-    group_combinations = []
-    if self.dataset_inst.is_mc:
-        weight_map["sum_filtered_mc_weight"] = events.mc_weight
-        weight_map["sum_mc_weight_selected"] = (events.mc_weight, event_sel)
-        # groups
-        group_map = {
-            **group_map,
-            # per process
-            "process": {
-                "values": events.process_id,
-                "mask_fn": (lambda v: events.process_id == v),
-            },
-        }
-        # combinations
-        #group_combinations.append(("process"))
-
-    events, results = self[increment_stats](
-        events=events,
-        results=results,
-        stats=stats,
-        weight_map=weight_map,
-        group_map=group_map,
-        #group_combinations=group_combinations,
-        **kwargs,
-    )
-
+    events, results = self[custom_increment_stats](events=events,
+                                                   task=kwargs["task"],
+                                                   results=results,
+                                                   stats=stats,
+                                                   no_sel=no_sel,
+                                                   event_sel=event_sel)
 
     results += SelectionResult(
         objects = {
+            "Electron" : {
+                "Electron": electron_indices,
+            },
+            "Muon" : {
+                "Muon": muon_indices,
+            },            
             "Tau" : {
                 "Tau": tautau_pair.rawIdx,
-            }
+            },
         },
     )
     
@@ -353,9 +391,6 @@ def select_tautau(
         debug_main(events,
                    results,
                    self.config_inst.x.triggers)
-
-
-    #from IPython import embed; embed()
 
 
     
