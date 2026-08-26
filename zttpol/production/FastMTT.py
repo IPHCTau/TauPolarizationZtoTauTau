@@ -153,10 +153,10 @@ class Likelihood:
             x = mass*np.sqrt(mass**2+gamma**2)
             return 2*np.sqrt(2)*mass*gamma*x/np.pi/np.sqrt(mass**2 + x)
 
-        H_denominator = (invariant_mass**2 - Higgs_mass**2)**2 + (Higgs_mass**2)*(Higgs_gamma**2)
-        #Z_denominator = (invariant_mass**2 - Z_mass**2)**2 + (Z_mass**2)*(Z_gamma**2)
+        #H_denominator = (invariant_mass**2 - Higgs_mass**2)**2 + (Higgs_mass**2)*(Higgs_gamma**2)
+        Z_denominator = (invariant_mass**2 - Z_mass**2)**2 + (Z_mass**2)*(Z_gamma**2)
         #return normalization_constant(Z_mass, Z_gamma)/Z_denominator + normalization_constant(Higgs_mass, Higgs_gamma)/H_denominator
-        return normalization_constant(Higgs_mass, Higgs_gamma)/H_denominator
+        return normalization_constant(Z_mass, Z_gamma)/Z_denominator
 
     
     def Gauss(self, invariant_mass):
@@ -313,11 +313,11 @@ class Likelihood:
 
 class FastMTT(Likelihood):
     def __init__(self,
-                 enable_BW = False,
+                 enable_BW = True,
                  enable_window = False,
                  calculate_uncertainties = False):
-        self.myLikelihood = Likelihood(enable_BW = False,
-                                       enable_window = False)
+        self.myLikelihood = Likelihood(enable_BW = enable_BW,
+                                       enable_window = enable_window)
         self.BestLikelihood = 0.0
         self.BestX = np.array([0.0, 0.0])
         self.bestP4 = 0.0

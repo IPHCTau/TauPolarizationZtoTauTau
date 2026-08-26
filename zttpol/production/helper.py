@@ -1,6 +1,14 @@
 import os
+import functools
 from typing import Optional
 from columnflow.util import maybe_import
+
+from dataclasses import dataclass
+
+from columnflow.production import Producer, producer
+from columnflow.columnar_util import (
+    set_ak_column, layout_ak_array, flat_np_view, ak_concatenate_safe
+)
 
 from zttpol.production.PolarimetricA1 import PolarimetricA1
 
@@ -11,6 +19,129 @@ coffea = maybe_import("coffea")
 import law
 logger = law.logger.get_logger(__name__)
 
+set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
+set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
+
+
+
+@dataclass
+class JetIdConfig:
+    """
+    Container object to describe a CMS jet id configuration, consisting of names of correction sets mapped to bit
+    positions, similar to how the ``jetId`` column is defined in nanoAOD. Example:
+
+    .. code-block:: python
+
+        # configurtion for AK4 puppi jets
+        # second bit for "tight" id, third bit for "tight + lepton veto" id
+        JetIdConfig(corrections={
+            "AK4PUPPI_Tight": 2,
+            "AK4PUPPI_TightLeptonVeto": 3,
+        })
+    """
+
+    corrections: dict[str, int]
+
+    def __post_init__(self) -> None:
+        # for each correction, check if the bit is set and fits into a uint8
+        for cor_name, bit in self.corrections.items():
+            if not (1 <= bit <= 8):
+                raise ValueError(f"jet id bit must be between 1 and 8, got {bit} for {cor_name}")
+
+@producer(
+    # names of used and produced columns are added dynamically in init depending on jet_name
+    # name of the jet collection
+    jet_name="Jet",
+    # function to determine the jet id config
+    get_jet_id_config=(lambda self: self.config_inst.x.jet_id),
+)
+def jet_id_manual(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+    """
+    Ref: https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetID13p6TeV#Jet_ID_implementation_with_N_AN1
+    """    
+    Jet = events[self.jet_name]
+
+    valid_mask = Jet["chMultiplicity"] >= 0
+    jet_id = ak.zeros_like(valid_mask, dtype=np.uint8)
+    
+    passJetIdTight = ak.where(np.abs(Jet.eta) <= 2.6,
+                              ((Jet.neHEF < 0.99)
+                               & (Jet.neEmEF < 0.9)
+                               & (Jet.chMultiplicity + Jet.neMultiplicity > 1)
+                               & (Jet.chHEF > 0.01)
+                               & (Jet.chMultiplicity > 0)),  # Tight criteria for abs_eta <= 2.6
+                              ak.where((np.abs(Jet.eta) > 2.6) & (np.abs(Jet.eta) <= 2.7),
+                                       ((Jet.neHEF < 0.9)
+                                        & (Jet.neEmEF < 0.99)),  # Tight criteria for 2.6 < abs_eta <= 2.7
+                                       ak.where((np.abs(Jet.eta) > 2.7) & (np.abs(Jet.eta) <= 3.0),
+                                                Jet.neHEF < 0.99,  # Tight criteria for 2.7 < abs_eta <= 3.0
+                                                ((Jet.neMultiplicity >= 2) & (Jet.neEmEF < 0.4))  # Tight criteria for abs_eta > 3.0
+                                                )
+                                       )
+                              )
+
+    # Default tight lepton veto
+    passJetIdTightLepVeto = ak.where(
+        np.abs(Jet.eta) <= 2.7,
+        (passJetIdTight & (Jet.muEF < 0.8) & (Jet.chEmEF < 0.8)),  # add lepton veto for abs_eta <= 2.7
+        passJetIdTight  # No lepton veto for 2.7 < abs_eta
+    )
+
+    jetIDcorr = {
+        f"Tight": passJetIdTight,
+        f"TightLeptonVeto": passJetIdTightLepVeto,
+    }
+    
+    for cor_name, pass_bit in self.cfg.corrections.items():
+        mask = jetIDcorr[cor_name.split('_')[-1]]
+        jet_id = ak.where(
+            valid_mask,
+            jet_id | (ak.values_astype(mask, np.uint8) << (pass_bit - 1)),
+            jet_id,
+        )
+        
+    # store jetid
+    events = set_ak_column(events, f"{self.jet_name}.jetId", jet_id, value_type=np.uint8)
+    
+    return events
+
+
+
+@jet_id_manual.init
+def jet_id_manual_init(self: Producer, **kwargs) -> None:
+    """
+    Dynamically add the names of the used and produced columns depending on the jet name.
+    """
+    super(jet_id_manual, self).init_func(**kwargs)
+
+    self.jet_columns = ["eta", "chHEF", "neHEF", "chEmEF", "neEmEF", "muEF", "chMultiplicity", "neMultiplicity"]
+    self.uses.update(f"{self.jet_name}.{col}" for col in self.jet_columns)
+    self.produces.add(f"{self.jet_name}.jetId")
+
+    
+@jet_id_manual.setup
+def jet_id_manual_setup(
+    self: Producer,
+    task: law.Task,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: law.util.InsertableDict,
+    **kwargs,
+) -> None:
+    """
+    Sets up the correction sets needed for the jet id using the external files.
+    """
+    super(jet_id_manual, self).setup_func(task=task,
+                                          reqs=reqs,
+                                          inputs=inputs,
+                                          reader_targets=reader_targets,
+                                          **kwargs)
+
+    # get the jet id config
+    self.cfg: JetIdConfig = self.get_jet_id_config()
+
+    
+    
 
 
 def remove_empty_places(array, debug=False):
@@ -55,9 +186,11 @@ def clean_rearranged_dict(p4dict, keylist=[], debug=False):
     
     for okey in out:
         if okey not in keylist:
+            #print(okey)
             masked_val = p4dict[okey][mask]
             max_count_safe = ak.max(ak.num(masked_val, axis=1))
             min_count_safe = ak.min(ak.num(masked_val, axis=1))
+            #print(max_count_safe, min_count_safe)
             if max_count_safe == min_count_safe:
                 masked_val = ak.drop_none(masked_val)
             else:
@@ -279,7 +412,7 @@ def getPolarimetricVector(tauP4    = None,
                                  ss1_pi,
                                  ss2_pi,
                                  tauch)
-        h = -a1pol.PVC().pvec
+        h = a1pol.PVC().pvec
         
 
     else:
@@ -308,3 +441,26 @@ def getCombOMEGA(omega1 : ak.Array,
 
 
 
+# ----------------------------------------- #
+#    LHEPart_spin to access helicity info   #
+# ----------------------------------------- #
+@producer(
+    uses={
+        "LHEPart.{spin,pdgId,status}"
+    },
+    produces={
+        "helicity_sign",
+    },
+)
+def assign_helicity(
+        self: Producer,
+        events: ak.Array,
+        **kwargs
+):
+    # find spin for tau-
+    where_to_find = (events.LHEPart.pdgId == 15) & (events.LHEPart.status == 1)
+    target_tau_spin = events.LHEPart.spin[where_to_find]
+    ev_helicity = ak.fill_none(ak.firsts(target_tau_spin, axis=1), 0)
+    events = set_ak_column_i32(events, "helicity_sign",  ev_helicity)
+
+    return events

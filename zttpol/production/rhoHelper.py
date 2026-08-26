@@ -166,7 +166,10 @@ class rhoHelper:
                    (AN2018_051_v8 : L700)
                    This is visible omega (used in 2016 analysis)
         """
+        #RFtauRhoPiLV  = self.LFtauRhoPiLV.boost(self.boostvec.negative())
+        #RFtauRhoPi0LV = self.LFtauRhoPi0LV.boost(self.boostvec.negative())
         efrac   = (self.LFtauRhoPiLV.energy - self.LFtauRhoPi0LV.energy) / (self.LFtauRhoPiLV.energy + self.LFtauRhoPi0LV.energy)
+        #efrac = (RFtauRhoPiLV.energy - RFtauRhoPi0LV.energy) / (RFtauRhoPiLV.energy + RFtauRhoPi0LV.energy)
         cosbeta = (self.mrho/np.sqrt(self.mrho * self.mrho - 4 * self.mpi * self.mpi))  *   efrac
 
         # make sure cosbeta should be within -1 and +1

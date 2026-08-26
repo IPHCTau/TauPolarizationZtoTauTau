@@ -18,21 +18,33 @@ from columnflow.columnar_util import optional_column as optional
 from columnflow.config_util import get_events_from_categories
 from zttpol.production.ReArrangeZcandProds import reArrangeDecayProducts, reArrangeGenDecayProducts
 from zttpol.production.ProduceObservables import ProduceRecoObservables, ProduceGenObservables
-#from zttpol.production.weights import tauspinner_weight
-#from zttpol.production.extra_weights import ff_weight, classify_events
 
-from zttpol.production.electron_weights import electron_idiso_weights, electron_trigger_weights, electron_xtrigger_weights
-from zttpol.production.tau_weights import tau_id_weights
+from zttpol.production.weights import (
+    electron_id_weights,
+    electron_reco_weights,
+    #electron_single_trigger_weights,
+    #electron_xtrigger_weights,
+    tau_id_weights,
+)
 
-from zttpol.production.sample_split import split_dy
+from zttpol.util import (
+    IF_DATASET_HAS_LHE_WEIGHTS,
+    IF_DATASET_IS_DY,
+    IF_DATASET_IS_W,
+    IF_DATASET_IS_SIGNAL,
+    IF_DATASET_IS_TT
+)
+from zttpol.util import (
+    IF_RUN2,
+    IF_RUN3,
+    IF_ALLOW_STITCHING,
+    IF_GENMATCH,
+    IF_GENMATCH_ON_FOR_SIGNAL,
+    transverse_mass
+)
 
-
-#from zttpol.production.angular_features import ProduceDetCosPsi, ProduceGenCosPsi
-from zttpol.util import IF_DATASET_HAS_LHE_WEIGHTS, IF_DATASET_IS_DY, IF_DATASET_IS_W, IF_DATASET_IS_SIGNAL, IF_DATASET_IS_TT
-from zttpol.util import IF_RUN2, IF_RUN3, IF_ALLOW_STITCHING, IF_GENMATCH, IF_GENMATCH_ON_FOR_SIGNAL, transverse_mass
-
-from zttpol.production.applyFastMTT import apply_fastMTT
 from zttpol.production.produce_base import produce_base
+
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -50,50 +62,37 @@ logger = law.logger.get_logger(__name__)
 @producer(
     uses={
         produce_base,
-        # -- muon -- #
-        electron_idiso_weights,
-        electron_trigger_weights,
-        electron_xtrigger_weights,
+        # -- electron -- #
+        electron_id_weights,
+        electron_reco_weights,
+        #electron_single_trigger_weights,
+        #electron_xtrigger_weights,
         # -- tau -- #
         tau_id_weights,
-        #IF_DATASET_IS_SIGNAL(tauspinner_weights),
-        #ff_weight,
         #classify_events,
         reArrangeDecayProducts,
         ProduceRecoObservables,
         IF_GENMATCH(reArrangeGenDecayProducts),
         IF_GENMATCH(ProduceGenObservables),
-        apply_fastMTT,
     },
     produces={
         produce_base,
         # -- muon -- #
-        electron_idiso_weights,
-        electron_trigger_weights,
-        electron_xtrigger_weights,
+        electron_id_weights,
+        electron_reco_weights,
+        #electron_single_trigger_weights,
+        #electron_xtrigger_weights,
         # -- tau -- #
         tau_id_weights,
-        #IF_DATASET_IS_SIGNAL(tauspinner_weights),
-        #ff_weight,
         #classify_events,
         ProduceRecoObservables,
         IF_GENMATCH(ProduceGenObservables),
-        #apply_fastMTT,
     },
 )
 def produce_etau(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 
     events = self[produce_base](events, **kwargs)
 
-    # ################## #
-    #     Run FastMTT    #
-    # ################## #
-    #logger.info(" >>>--- FastMTT-Wiktors --->>> [Not as fast as you think]")
-    #events = self[apply_fastMTT](events, run_fmtt=self.config_inst.x.enable_fastMTT)
-
-    # ########################### #
-    # -------- For PhiCP -------- #
-    # ########################### #
     events, P4_dict = self[reArrangeDecayProducts](events)
     events   = self[ProduceRecoObservables](events, P4_dict)
     
@@ -106,10 +105,11 @@ def produce_etau(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     #events = self[classify_events](events, **kwargs)
     
     if self.dataset_inst.is_mc:
-        events = self[electron_idiso_weights](events, **kwargs)
-        events = self[electron_trigger_weights](events, **kwargs)
-        events = self[electron_xtrigger_weights](events, **kwargs)
+        events = self[electron_id_weights](events, **kwargs)
+        events = self[electron_reco_weights](events, **kwargs)
+        #events = self[electron_single_trigger_weights](events, **kwargs)
         events = self[tau_id_weights](events, do_syst=True, **kwargs)
+        #events = self[electron_xtrigger_weights](events, **kwargs)
 
         
     #events = self[ff_weight](events, **kwargs)        

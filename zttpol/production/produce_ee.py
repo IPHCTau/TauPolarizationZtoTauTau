@@ -20,10 +20,9 @@ from zttpol.production.ReArrangeZcandProds import reArrangeDecayProducts, reArra
 from zttpol.production.ProduceObservables import ProduceRecoObservables, ProduceGenObservables
 
 from zttpol.production.weights import (
-    muon_id_weights,
-    muon_iso_weights,
-    muon_trigger_weights,
-    tau_id_weights,
+    electron_id_weights,
+    electron_reco_weights,
+    #electron_single_trigger_weights,
 )
 
 from zttpol.util import (
@@ -61,59 +60,29 @@ logger = law.logger.get_logger(__name__)
 @producer(
     uses={
         produce_base,
-        # -- muon -- #
-        muon_id_weights,
-        muon_iso_weights,
-        muon_trigger_weights,
-        #muon_xtrigger_weights,
-        # -- tau -- #
-        tau_id_weights,
-        #classify_events,
-        reArrangeDecayProducts,
-        ProduceRecoObservables,
-        IF_GENMATCH(reArrangeGenDecayProducts),
-        IF_GENMATCH(ProduceGenObservables),
+        # -- electron -- #
+        electron_id_weights,
+        electron_reco_weights,
+        #electron_single_trigger_weights,
     },
     produces={
         produce_base,
-        # -- muon -- #
-        muon_id_weights,
-        muon_iso_weights,
-        muon_trigger_weights,
-        #muon_xtrigger_weights,
-        # -- tau -- #
-        tau_id_weights,
-        #classify_events,
-        ProduceRecoObservables,
-        IF_GENMATCH(ProduceGenObservables),
+        # -- electron -- #
+        electron_id_weights,
+        electron_reco_weights,
+        #electron_single_trigger_weights,
     },
 )
-def produce_mutau(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+def produce_ee(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 
     events = self[produce_base](events, **kwargs)
 
-    events, P4_dict = self[reArrangeDecayProducts](events)
-    events   = self[ProduceRecoObservables](events, P4_dict)
-    
-    if self.config_inst.x.extra_tags.genmatch:
-        events, P4_gen_dict = self[reArrangeGenDecayProducts](events)
-        events = self[ProduceGenObservables](events, P4_gen_dict) 
-
-    
-    #logger.info(" >>>--- Evaluate Classifier Models (IC) --->>> [In extra_weights.py and processes.py]")
-    #events = self[classify_events](events, **kwargs)
-
-    #from IPython import embed; embed()
-
     
     if self.dataset_inst.is_mc:
-        events = self[muon_id_weights](events, **kwargs)
-        events = self[muon_iso_weights](events, **kwargs)
-        events = self[muon_trigger_weights](events, **kwargs)
-        events = self[tau_id_weights](events, **kwargs)
-        #    events = self[muon_xtrigger_weights](events, **kwargs)
+        events = self[electron_id_weights](events, **kwargs)
+        events = self[electron_reco_weights](events, **kwargs)
+        #events = self[muon_single_trigger_weights](events, **kwargs)
 
-        
     #events = self[ff_weight](events, **kwargs)        
     
     return events

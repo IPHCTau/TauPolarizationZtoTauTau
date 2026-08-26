@@ -23,7 +23,6 @@ from zttpol.production.weights import (
     muon_id_weights,
     muon_iso_weights,
     muon_trigger_weights,
-    tau_id_weights,
 )
 
 from zttpol.util import (
@@ -62,17 +61,10 @@ logger = law.logger.get_logger(__name__)
     uses={
         produce_base,
         # -- muon -- #
+        "Muon.pt",
         muon_id_weights,
         muon_iso_weights,
         muon_trigger_weights,
-        #muon_xtrigger_weights,
-        # -- tau -- #
-        tau_id_weights,
-        #classify_events,
-        reArrangeDecayProducts,
-        ProduceRecoObservables,
-        IF_GENMATCH(reArrangeGenDecayProducts),
-        IF_GENMATCH(ProduceGenObservables),
     },
     produces={
         produce_base,
@@ -80,40 +72,22 @@ logger = law.logger.get_logger(__name__)
         muon_id_weights,
         muon_iso_weights,
         muon_trigger_weights,
-        #muon_xtrigger_weights,
-        # -- tau -- #
-        tau_id_weights,
-        #classify_events,
-        ProduceRecoObservables,
-        IF_GENMATCH(ProduceGenObservables),
     },
 )
-def produce_mutau(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+def produce_mumu(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 
     events = self[produce_base](events, **kwargs)
-
-    events, P4_dict = self[reArrangeDecayProducts](events)
-    events   = self[ProduceRecoObservables](events, P4_dict)
-    
-    if self.config_inst.x.extra_tags.genmatch:
-        events, P4_gen_dict = self[reArrangeGenDecayProducts](events)
-        events = self[ProduceGenObservables](events, P4_gen_dict) 
-
-    
-    #logger.info(" >>>--- Evaluate Classifier Models (IC) --->>> [In extra_weights.py and processes.py]")
-    #events = self[classify_events](events, **kwargs)
-
-    #from IPython import embed; embed()
 
     
     if self.dataset_inst.is_mc:
         events = self[muon_id_weights](events, **kwargs)
         events = self[muon_iso_weights](events, **kwargs)
-        events = self[muon_trigger_weights](events, **kwargs)
-        events = self[tau_id_weights](events, **kwargs)
-        #    events = self[muon_xtrigger_weights](events, **kwargs)
+        # only single 
+        trigger_muon_mask = ak.local_index(events.Muon.pt, axis=1) == 0
+        events = self[muon_trigger_weights](events,
+                                            muon_mask=trigger_muon_mask,
+                                            **kwargs)
 
-        
     #events = self[ff_weight](events, **kwargs)        
     
     return events
