@@ -19,6 +19,12 @@ ak = maybe_import("awkward")
 def cat_incl(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     return events, ak.ones_like(events.event) == 1
 
+# emu
+@categorizer(uses={"channel_id"})
+def cat_emu(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    ch = self.config_inst.get_channel("emu")
+    return events, events["channel_id"] == ch.id
+
 # etau
 @categorizer(uses={"channel_id"})
 def cat_etau(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
@@ -35,6 +41,18 @@ def cat_mutau(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, 
 @categorizer(uses={"channel_id"})
 def cat_tautau(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     ch = self.config_inst.get_channel("tautau")
+    return events, events["channel_id"] == ch.id
+
+# ee
+@categorizer(uses={"channel_id"})
+def cat_ee(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    ch = self.config_inst.get_channel("ee")
+    return events, events["channel_id"] == ch.id
+
+# mumu
+@categorizer(uses={"channel_id"})
+def cat_mumu(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    ch = self.config_inst.get_channel("mumu")
     return events, events["channel_id"] == ch.id
 
 
