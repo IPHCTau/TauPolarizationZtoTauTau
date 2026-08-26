@@ -13,8 +13,19 @@ from typing import Any, Optional
 from functools import wraps
 from collections import defaultdict, OrderedDict
 
+from columnflow.columnar_util import (  # noqa: F401
+    IF_DATA,
+    IF_MC,
+    EMPTY_FLOAT,
+    ArrayFunction,
+    deferred_column,
+    conditional_column,
+    Route,
+    set_ak_column,
+)
 from columnflow.util import maybe_import
-from columnflow.columnar_util import ArrayFunction, deferred_column
+from columnflow.types import Any, Sequence
+
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.columnar_util import optional_column as optional
 
@@ -53,6 +64,7 @@ def filter_by_triggers(lep_pair, mask):
     out_pair = ak.where(any_mask, lep_pair, dummy)
     return out_pair
 
+"""
 @deferred_column
 def IF_RUN2(self, func: ArrayFunction)  -> Any | set[Any]:
     return self.get() if func.config_inst.campaign.x.year < 2022 else None
@@ -60,6 +72,7 @@ def IF_RUN2(self, func: ArrayFunction)  -> Any | set[Any]:
 @deferred_column
 def IF_RUN3(self, func: ArrayFunction)  -> Any | set[Any]:
     return self.get() if func.config_inst.campaign.x.year >= 2022 else None
+"""
 
 @deferred_column
 def IF_NANO_V9(self, func: ArrayFunction) -> Any | set[Any]:
@@ -173,6 +186,23 @@ def IF_GENMATCH(
     if func.config_inst.x.extra_tags.genmatch == True:
         dogenmatch = True
     return self.get() if dogenmatch else None
+
+
+@conditional_column
+def IF_RUN2(self, func: ArrayFunction)  -> bool:
+    return func.config_inst.campaign.x.run == 2
+
+@conditional_column
+def IF_RUN3(self, func: ArrayFunction)  -> bool:
+    return func.config_inst.campaign.x.run == 3
+
+@conditional_column
+def IF_RUN_3_2024(self, func: ArrayFunction) -> bool:
+    return func.config_inst.campaign.x.run == 3 and func.config_inst.campaign.x.year == 2024
+
+#@deferred_column
+#def IF_RUN_3_2024(self, func: ArrayFunction)  -> Any | set[Any]:
+#    return self.get() if (func.config_inst.campaign.x.run == 3 and func.config_inst.campaign.x.year == 2024) else None
 
 
 def transverse_mass(lepton: ak.Array, met: ak.Array) -> ak.Array:
@@ -411,6 +441,7 @@ def enforce_zcand_type(cand, field_type_dict, **kwargs):
     temp = {}
     #from IPython import embed; embed()
     for field, typename in field_type_dict.items():
+        #print(field)
         # 2022PreEE tt_dl --branch=8 has one single nan value for the tau in hcand. So, applying ak.nan_to_num for safety !!!
         # But, why nan?? Babushcha knows
         # event : 6784092 hcand_IPx: [[-0.000813, nan]]
@@ -423,7 +454,8 @@ def enforce_zcand_type(cand, field_type_dict, **kwargs):
         #from IPython import embed; embed()
         temp[field] = ak.enforce_type(ak.values_astype(ak.nan_to_num(field_in, 0.0),typename),
                                       f"{dim} * {typename}")
-        #from IPython import embed; embed()
+
+    #from IPython import embed; embed()
         
     out_cand = ak.zip(temp)
     return out_cand
@@ -545,3 +577,39 @@ def setp4(name="LorentzVector", *args, verbose: Optional[bool] = False):
             with_name=name,
             behavior=coffea.nanoevents.methods.vector.behavior
         )
+
+
+
+def make_finite(events, debug=False):
+    for key in events.fields:
+        field = events[key]
+
+        columns = (
+            [(f"{key}.{k}", field[k]) for k in field.fields]
+            if field.fields
+            else [(key, field)]
+        )
+
+        for route, column in columns:
+            try:
+                finite = ak.fill_none(np.isfinite(column), True)
+
+                if ak.any(~finite, axis=None):
+                    n_nonfinite = ak.sum(~finite, axis=None)
+
+                    if debug:
+                        logger.warning(
+                            f"{route}: replacing {n_nonfinite} non-finite values"
+                        )
+
+                    events = set_ak_column(
+                        events,
+                        route,
+                        ak.where(finite, column, EMPTY_FLOAT),
+                        #ak.nan_to_num(column),
+                    )
+
+            except (TypeError, ValueError):
+                pass
+
+    return events
