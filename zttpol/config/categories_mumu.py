@@ -20,8 +20,8 @@ logger = law.logger.get_logger(__name__)
 
 @call_once_on_config()
 def add_RealOrFake_categories(config: od.Config) -> None:
-    add_category(config, name="real_2", id=1000000, selection="cat_real_2", label="prompt",     tags={"tau2isRealMC"})
-    add_category(config, name="fake_2", id=2000000, selection="cat_fake_2", label="non-prompt", tags={"tau2isFakeMC"})
+    add_category(config, name="real_1", id=1000000, selection="cat_real_1", label="prompt",     tags={"prompt"})
+    add_category(config, name="fake_1", id=2000000, selection="cat_fake_1", label="non-prompt", tags={"nonprompt"})
 
     
 @call_once_on_config()
@@ -44,34 +44,6 @@ def add_ABCD_categories(config: od.Config) -> None:
     add_category(config,name="SR",     id=40000,  selection="cat_os_iso1_iso2_lowmt",         label="sr",       tags={"os","iso",    "iso2", "lowmt" })
     
 
-@call_once_on_config()
-def add_classifier_categories(config: od.Config) -> None:
-    """
-     just before the final leaf
-     keep ids from 100 with 50 interval, up to 1400
-    """
-    # hardonic
-    add_category(config,name="nodeDY",    id=100,  selection="cat_node_dy",            label="DY_node",    tags={"dy_node"})
-    add_category(config,name="nodeFake",  id=200,  selection="cat_node_fake",          label="Fake_node",  tags={"fake_node"})
-    add_category(config,name="nodeHiggs", id=300,  selection="cat_node_higgs",         label="Higgs_node", tags={"higgs_node"})
-
-
-    
-@call_once_on_config()
-def add_DM_categories(config: od.Config) -> None:
-    """
-     final chain of categories
-     reserve the ids from 1 to 50
-    """
-    # leptonic
-    add_category(config, name="pi_2",          id=1,  selection="cat_pi_2",            label=r"$\tau_{h}\to\pi$",                                    tags={"tau2pi"    }) # h2 -> pi
-    add_category(config, name="rho_2",         id=2,  selection="cat_rho_2",           label=r"$\tau_{h}\to\rho$",                                   tags={"tau2rho"   }) # h2 -> rho
-    add_category(config, name="a1dm2_2",       id=3,  selection="cat_a1dm2_2",         label=r"$\tau_{h}\to a_{1}(1\pi-2\pi^{0})$",                  tags={"tau2a1DM2" }) # h2 -> a1
-    add_category(config, name="a1dm10_2",      id=4,  selection="cat_a1dm10_2",        label=r"$\tau_{h}\to a_{1}(3\pi-0\pi^{0})$",                  tags={"tau2a1DM10"}) # h2 -> a1
-    add_category(config, name="a1dm11_2",      id=5,  selection="cat_a1dm11_2",        label=r"$\tau_{h}\to a_{1}(3\pi-1\pi^{0})$",                  tags={"tau2a1DM11"}) # h2 -> a1
-
-
-    
 # ################### #
 # main categorization #
 # ################### #
@@ -83,19 +55,16 @@ def add_categories(config: od.Config) -> None:
     """
     
     add_category(config,
-                 name="mutau",
+                 name="mumu",
                  id=10000000,
-                 selection="cat_mutau",
-                 label=r"$\mu\tau_{h}$",
-                 tags={"mutau"})
+                 selection="cat_mumu",
+                 label=r"$\mu\mu$",
+                 tags={"mumu"})
 
     #add_njet_categories(config)
     add_RealOrFake_categories(config)
     
     add_ABCD_categories(config)
-    add_DM_categories(config)
-
-    #add_classifier_categories(config)
 
     # ############################################################### #
     # To create combinations of categories                            #
@@ -116,10 +85,9 @@ def add_categories(config: od.Config) -> None:
         }
 
     main_categories = {
-        "channel": CategoryGroup(['mutau'], is_complete=True, has_overlap=False),
-        "RorF"   : CategoryGroup(['real_2'], is_complete=False, has_overlap=False),
+        "channel": CategoryGroup(['mumu'], is_complete=True, has_overlap=False),
+        "RorF"   : CategoryGroup(['real_1'], is_complete=False, has_overlap=False),
         "abcd"   : CategoryGroup(['DRnum','DRden','AR','SR'], is_complete=True, has_overlap=False),
-        "cp"     : CategoryGroup(['pi_2','rho_2','a1dm2_2','a1dm10_2','a1dm11_2'], is_complete=True, has_overlap=False),
     }
 
     create_category_combinations(config=config,
@@ -131,6 +99,6 @@ def add_categories(config: od.Config) -> None:
     
 
     all_cats = [cat.name for cat, _, _ in config.walk_categories()]
-    logger.warning(f"{len(all_cats)} categories created for mutau channel")
+    logger.warning(f"{len(all_cats)} categories created for mumu channel")
     
     

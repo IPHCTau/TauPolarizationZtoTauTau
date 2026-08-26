@@ -132,7 +132,7 @@ def add_triggers_2018(config: od.Config, postfix: str) -> None:
                 ),
             ],
             #applies_to_dataset=(lambda dataset_inst: dataset_inst.is_mc or dataset_inst.x.era >= "D"),
-            tags={"single_trigger", "single_e", "channel_e_tau"},
+            tags={"single_trigger", "single_e", "channel_e_e"},
         ),
         Trigger(
             name="HLT_Ele35_WPTight_Gsf",
@@ -149,71 +149,8 @@ def add_triggers_2018(config: od.Config, postfix: str) -> None:
                     trigger_bits=2**1,
                 ),
             ],
-            tags={"single_trigger", "single_e", "channel_e_tau"},
+            tags={"single_trigger", "single_e", "channel_e_e"},
         ),
-        # ===>>> e-tauh
-        Trigger(
-            name="HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTau30_eta2p1_CrossL1",
-            id=11151,
-            run_range=(None,317509),
-            legs=[
-                TriggerLeg(
-                    pdg_id=11,
-                    min_pt=26.0,
-                    min_pt_online=24.0,
-                    max_abseta=2.1,
-                    max_abseta_online=2.1,
-                    # filter names:
-                    # hltEle24erWPTightGsfTrackIsoFilterForTau
-                    # hltOverlapFilterIsoEle24WPTightGsfLooseIsoPFTau30
-                    trigger_bits=2**1 + 2**6, #2 + 64,
-                ),
-                TriggerLeg(
-                    pdg_id=15,
-                    min_pt=35.0,
-                    min_pt_online=30.0,
-                    max_abseta=2.1,
-                    max_abseta_online=2.1,
-                    # filter names:
-                    # hltSelectedPFTau30LooseChargedIsolationL1HLTMatched
-                    # hltOverlapFilterIsoEle24WPTightGsfLooseIsoPFTau30
-                    trigger_bits=2**8 + 2**10,
-                ),
-            ],
-            applies_to_dataset=(lambda dataset_inst: dataset_inst.is_data and dataset_inst.x.era <= "B"),
-            tags={"cross_trigger", "cross_e_tau", "channel_e_tau"},
-        ),
-        Trigger(
-            name="HLT_Ele24_eta2p1_WPTight_Gsf_LooseChargedIsoPFTauHPS30_eta2p1_CrossL1",
-            id=11152,
-            run_range=(317508,None),
-            legs=[
-                TriggerLeg(
-                    pdg_id=11,
-                    min_pt=26.0,
-                    min_pt_online=24.0,
-                    max_abseta=2.1,
-                    max_abseta_online=2.1,
-                    # filter names:
-                    # hltEle24erWPTightGsfTrackIsoFilterForTau
-                    # hltOverlapFilterIsoEle24WPTightGsfLooseIsoPFTau30
-                    trigger_bits=2**1 + 2**6,
-                ),
-                TriggerLeg(
-                    pdg_id=15,
-                    min_pt=35.0,
-                    min_pt_online=30.0,
-                    max_abseta=2.1,
-                    max_abseta_online=2.1,
-                    # filter names:
-                    # hltSelectedPFTau30LooseChargedIsolationL1HLTMatched
-                    # hltOverlapFilterIsoEle24WPTightGsfLooseIsoPFTau30
-                    trigger_bits=2**8 + 2**10,
-                ),
-            ],
-            applies_to_dataset=(lambda dataset_inst: dataset_inst.is_mc or dataset_inst.x.era >= "B"),
-            tags={"cross_trigger", "cross_e_tau", "channel_e_tau"},
-        ),        
     ])
 
 

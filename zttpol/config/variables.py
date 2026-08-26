@@ -42,45 +42,48 @@ def add_lepton_features(cfg: od.Config) -> None:
     """
     Adds lepton features only , ex electron_1_pt
     """
+    obj_labels = {
+        "Electron": r"e",
+        "Muon": r"\mu",
+        "Tau": r"\tau_h",
+    }
     for obj in ["Electron", "Muon", "Tau"]:
+        label = obj_labels[obj]
         for i in range(2):
+            idx = i + 1
             cfg.add_variable(
-                name=f"{obj.lower()}_{i+1}_pt",
+                name=f"{obj.lower()}_{idx}_pt",
                 expression=f"{obj}.pt[:,{i}]",
                 null_value=EMPTY_FLOAT,
                 binning=(40, 0., 200.),
                 unit="GeV",
-                x_title=obj + r" $p_{T}$",
+                x_title=rf"$p_{{T}}^{{{label}_{idx}}}$",
             )
             cfg.add_variable(
-                name=f"{obj.lower()}_{i+1}_phi",
+                name=f"{obj.lower()}_{idx}_phi",
                 expression=f"{obj}.phi[:,{i}]",
                 null_value=EMPTY_FLOAT,
                 binning=(32, -3.2, 3.2),
-                x_title=obj + r" $\phi$",
+                x_title=rf"$\phi^{{{label}_{idx}}}$",
             )
             cfg.add_variable(
-                name=f"{obj.lower()}_{i+1}_eta",
+                name=f"{obj.lower()}_{idx}_eta",
                 expression=f"{obj}.eta[:,{i}]",
                 null_value=EMPTY_FLOAT,
                 binning=(25, -2.5, 2.5),
-                x_title=obj + r" $\eta$",
+                x_title=rf"$\eta^{{{label}_{idx}}}$",
             )
             cfg.add_variable(
-                name=f"{obj.lower()}_{i+1}_IPsig",
-                expression=f"{obj}.IPsig[:,{i}]",
+                name=f"{obj.lower()}_{idx}_mass",
+                expression=f"{obj}.mass[:,{i}]",
                 null_value=EMPTY_FLOAT,
-                binning=(80, -10.0, 10.0) if obj == "Tau" else (40, 0.0, 10.0),
-                x_title=obj + r" $IP Significance$",
+                binning=(25, 0.0, 5.0),
+                unit="GeV",
+                x_title=rf"$M^{{{label}_{idx}}}$",
             )
-        cfg.add_variable(
-            name=f"{obj.lower()}_mT",
-            expression=f"{obj}.mT",
-            null_value=EMPTY_FLOAT,
-            binning=(40, 0.0, 200.0),
-            unit="GeV",
-            x_title=obj + r"$m_{T}$",
-    )
+
+
+
 
 def add_gen_features(cfg: od.Config) -> None:
     for i in range(2):
@@ -180,26 +183,19 @@ def add_highlevel_features(cfg: od.Config) -> None:
     Adds MET and other high-level features
     """
     cfg.add_variable(
-        name="met",
-        expression="MET.pt",
-        null_value=EMPTY_FLOAT,
-        binning=(20, 0.0, 100.0),
-        x_title=r"MET",
-    )
-    cfg.add_variable(
-        name="puppi_met_pt",
+        name="met_pt",
         expression="PuppiMET.pt",
         null_value=EMPTY_FLOAT,
         binning=(50, 0,100),
         unit="GeV",
-        x_title=r"PuppiMET p$_{T}$",
+        x_title=r"$p_{T}^{\mathrm{miss}}$",
     )
     cfg.add_variable(
-        name="puppi_met_phi",
+        name="met_phi",
         expression="PuppiMET.phi",
         null_value=EMPTY_FLOAT,
         binning=(32, -3.2, 3.2),
-        x_title=r"PuppiMET $\phi$",
+        x_title=r"$\phi^{\mathrm{miss}}$",
     )
     # classifier scores
     cfg.add_variable(
@@ -283,131 +279,57 @@ def add_zcand_features(cfg: od.Config) -> None:
     """
     Adds z candidate features only
     """
+    obj_labels = {
+        '1': r"\mathrm{Z-Cand}\,\ell^1",
+        '2': r"\mathrm{Z-Cand}\,\ell^2"
+    }
+
     for i in range(2):
+        idx = i + 1
+        label = obj_labels[f'{idx}']
         cfg.add_variable(
-            name=f"zcand_{i+1}_pt",
+            name=f"zcand_{idx}_pt",
             expression=f"zcand.pt[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(40, 0., 200.),
             unit="GeV",
-            #x_title=f"hcand[{i+1}]" + r" $p_{T}$",
-            x_title=r"Leading lepton p$_{T}$" if i == 0 else r"Subleading lepton p$_{T}$",
+            x_title=rf"$p_{{T}}^{{{label}}}$",
         )
         cfg.add_variable(
-            name=f"zcand_{i+1}_pt_MediumWP_binvar",
-            expression=f"zcand.pt[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=[35,40,45,50,55,60,65,70,80,90,100,120,140,200],
-            unit="GeV",
-            x_title=f"zcand[{i+1}]" + r" $p_{T}$",
-        )        
-        cfg.add_variable(
-            name=f"zcand_{i+1}_pt_VTightWP_binvar",
+            name=f"zcand_{idx}_pt_binvar",
             expression=f"zcand.pt[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=[35,40,45,50,55,60,65,70,80,120,200],
             unit="GeV",
-            x_title=f"zcand[{i+1}]" + r" $p_{T}$",
-        )        
-        cfg.add_variable(
-            name=f"zcand_{i+1}_pt_VTightWP_binvar_v2",
-            expression=f"zcand.pt[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=[35,40,45,50,55,60,65,70,80,100,140,200],
-            unit="GeV",
-            x_title=f"zcand[{i+1}]" + r" $p_{T}$",
+            x_title=rf"$p_{{T}}^{{{label}}}$",
         )
         cfg.add_variable(
-            name=f"zcand_{i+1}_pt_fastMTT",
-            expression=f"zcand.pt_fastMTT[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=(40, 0., 200.),
-            unit="GeV",
-            x_title=r"Leading lepton p$_{T}$ (fastMTT)" if i == 0 else r"Subleading lepton p$_{T}$ (fastMTT)",  
-            #x_title=f"hcand[{i+1}]" + r" $p_{T}$ (fastMTT)",
-        )
-        cfg.add_variable(
-            name=f"zcand_{i+1}_phi",
+            name=f"zcand_{idx}_phi",
             expression=f"zcand.phi[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(32, -3.2, 3.2),
-            x_title=r"Leading lepton $\phi$" if i == 0 else r"Subleading lepton $\phi$",
-            #x_title=f"hcand[{i+1}]" + r" $\phi$",
+            x_title=rf"$\phi^{{{label}}}$",
         )
         cfg.add_variable(
-            name=f"zcand_{i+1}_phi_fastMTT",
-            expression=f"zcand.phi_fastMTT[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=(32, -3.2, 3.2),
-            x_title=f"zcand[{i+1}]" + r" $\phi$ (fastMTT)",
-        )
-        cfg.add_variable(
-            name=f"zcand_{i+1}_eta",
+            name=f"zcand_{idx}_eta",
             expression=f"zcand.eta[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(25, -2.5, 2.5),
-            x_title=r"Leading lepton $\eta$" if i == 0 else r"Subleading lepton $\eta$",
-            #x_title=f"hcand[{i+1}]" + r" $\eta$",
+            x_title=rf"$\eta^{{{label}}}$",
         )
         cfg.add_variable(
-            name=f"zcand_{i+1}_eta_fastMTT",
-            expression=f"zcand.eta_fastMTT[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=(25, -2.5, 2.5),
-            x_title=f"zcand[{i+1}]" + r" $\eta$ (fastMTT)",
-        )
-        cfg.add_variable(
-            name=f"zcand_{i+1}_mass",
+            name=f"zcand_{idx}_mass",
             expression=f"zcand.mass[:,{i}]",
             null_value=EMPTY_FLOAT,
             binning=(30, 0., 3.0),
             unit="GeV",
-            x_title=r"Leading lepton mass" if i == 0 else r"Subleading lepton mass",
-            #x_title=f"hcand[{i+1}]" + " mass",
+            x_title=rf"$M^{{{label}}}$",
         )
         cfg.add_variable(
-            name=f"zcand_{i+1}_mass_fastMTT",
-            expression=f"zcand.mass_fastMTT[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=(30, 0., 3.0),
-            unit="GeV",
-            x_title=f"zcand[{i+1}]" + " mass (fastMTT)",
-        )
-        cfg.add_variable(
-            name=f"zcand_{i+1}_decayMode",
+            name=f"zcand_{idx}_decayMode",
             expression=f"zcand.decayMode[:,{i}]",
-            #null_value=EMPTY_INT,
             binning=(12, -0.5, 11.5),
-            x_title=r"Leading lepton DM" if i == 0 else r"Subleading lepton DM",            
-            #x_title=f"hcand[{i+1}]" + r" $DM (PNet)$",
-        )
-        cfg.add_variable(
-            name=f"zcand_{i+1}_IPx",
-            expression=f"zcand.IPx[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=(30, -0.015, 0.015),
-            x_title=f"zcand[{i+1}]" + r" $IP_{x}$",
-        )
-        cfg.add_variable(
-            name=f"zcand_{i+1}_IPy",
-            expression=f"zcand.IPy[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=(30, -0.015, 0.015),
-            x_title=f"zcand[{i+1}]" + r" $IP_{y}$",
-        )
-        cfg.add_variable(
-            name=f"zcand_{i+1}_IPz",
-            expression=f"zcand.IPz[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=(30, -0.015, 0.015),
-            x_title=f"zcand[{i+1}]" + r" $IP_{z}$",
-        )
-        cfg.add_variable(
-            name=f"zcand_{i+1}_IPsig",
-            expression=f"zcand.IPsig[:,{i}]",
-            null_value=EMPTY_FLOAT,
-            binning=(40, 0.0, 10),
-            x_title=f"zcand[{i+1}]" + r" $IP Significance$",
+            x_title=rf"$DM^{{{label}}}$",
         )
         cfg.add_variable(
             name=f"dphi_met_z{i+1}",
@@ -434,18 +356,19 @@ def add_zcand_features(cfg: od.Config) -> None:
         x_title=r"lepton pair visible mass",
     )
     cfg.add_variable(
+        name="z_invm",
+        expression="zcand_invm",
+        null_value=EMPTY_FLOAT,
+        binning=(50, 40.0, 140.0),
+        #binning=(50, 0.0, 200.0),
+        unit="GeV",
+        x_title=r"mass ($\ell^+\ell^-$)",
+    )
+    cfg.add_variable(
         name="zcand_invm_1bin",
         expression="zcand_invm",
         null_value=EMPTY_FLOAT,
         binning=(1, 0.0, 10000.0),
-        unit="GeV",
-        x_title=r"$visible mass$",
-    )
-    cfg.add_variable(
-        name="zcand_invm_10GeV",
-        expression="zcand_invm",
-        null_value=EMPTY_FLOAT,
-        binning=(40, 0.0, 400.0),
         unit="GeV",
         x_title=r"$visible mass$",
     )
@@ -520,151 +443,90 @@ def add_zcand_features(cfg: od.Config) -> None:
         x_title=r"$m_{T} ~(\tau_{1}, \tau_{2}, E_{T})$",
     )
     
-    # PhiCP - Det
+    # omegas
     cfg.add_variable(
-        name="PhiCP_IPIP",
-        expression="PhiCP_IPIP",
+        name="omegavis_1",
+        expression="omegavis_1",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-IP}$ (rad)",
+        binning=(32, -1, 1),
+        x_title=r"$\omega_{vis}$ [Leading tau]",
     )
     cfg.add_variable(
-        name="PhiCP_DPDP",
-        expression="PhiCP_DPDP",
+        name="omegavis_2",
+        expression="omegavis_2",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{DP-DP}$ (rad)",
+        binning=(32, -1, 1),
+        x_title=r"$\omega_{vis}$",
     )
     cfg.add_variable(
-        name="PhiCP_PVPV",
-        expression="PhiCP_PVPV",
+        name="omegabar_1",
+        expression="omegabar_1",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{PV-PV}$ (rad)",
+        binning=(32, -1, 1),
+        x_title=r"$\bar{\omega}$ [Leading tau]",
     )
     cfg.add_variable(
-        name="PhiCP_IPDP",
-        expression="PhiCP_IPDP",
+        name="omegabar_2",
+        expression="omegabar_2",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-DP}$ (rad)",
+        binning=(32, -1, 1),
+        x_title=r"$\bar{\omega}$",
     )
     cfg.add_variable(
-        name="PhiCP_IPPV",
-        expression="PhiCP_IPPV",
+        name="OMEGABAR",
+        expression="OMEGABAR",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-PV}$ (rad)",
-    )
-    # PhiCP - Gen
-    cfg.add_variable(
-        name="PhiCPGen_IPIP",
-        expression="PhiCPGen_IPIP",
-        null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-IP}$ (rad) [Gen level]",
+        binning=(32, -1, 1),
+        x_title=r"$\bar{\Omega}$",
     )
     cfg.add_variable(
-        name="PhiCPGen_DPDP",
-        expression="PhiCPGen_DPDP",
+        name="massvis",
+        expression="massvis",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{DP-DP}$ (rad) [Gen level]",
+        binning=(20, 40, 120),
+        x_title=r"$m_{vis}$ (GeV)",
     )
     cfg.add_variable(
-        name="PhiCPGen_PVPV",
-        expression="PhiCPGen_PVPV",
+        name="gen_omegabar_1",
+        expression="gen_omegabar_1",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{PV-PV}$ (rad) [Gen level]",
+        binning=(30, -1, 1),
+        x_title=r"Gen $\bar{\omega}$ [Leading tau]",
     )
     cfg.add_variable(
-        name="PhiCPGen_IPDP",
-        expression="PhiCPGen_IPDP",
+        name="gen_omegabar_2",
+        expression="gen_omegabar_2",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-DP}$ (rad) [Gen level]",
+        binning=(30, -1, 1),
+        x_title=r"Gen $\bar{\omega}$",
     )
     cfg.add_variable(
-        name="PhiCPGen_IPPV",
-        expression="PhiCPGen_IPPV",
+        name="gen_OMEGABAR",
+        expression="gen_OMEGABAR",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-PV}$ (rad) [Gen level]",
-    )
-    # alpha minus Det
-    cfg.add_variable(
-        name="Alpha",
-        expression="alpha",
-        null_value=EMPTY_FLOAT,
-        binning=(20, 0, np.pi/2.0),
-        x_title=r"$\alpha_{-}$",
-    )
-    # alpha minus Gen
-    cfg.add_variable(
-        name="AlphaGen",
-        expression="alphaGen",
-        null_value=EMPTY_FLOAT,
-        binning=(20, 0, np.pi/2.0),
-        x_title=r"$\alpha_{-} [GenLevel]$",
-    )
-    # conditional PhiCP
-    # TODO:
-    cfg.add_variable(
-        name="PhiCP_IPIP_alpha_lt_piby4",
-        expression="PhiCP_IPIP_alpha_lt_piby4",
-        null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-IP}$ (rad) [a- < pi/4]",
+        binning=(32, -1, 1),
+        x_title=r"Gen $\bar{\Omega}$",
     )
     cfg.add_variable(
-        name="PhiCP_IPIP_alpha_gt_piby4",
-        expression="PhiCP_IPIP_alpha_gt_piby4",
+        name="gen_omegavis_1",
+        expression="gen_omegavis_1",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-IP}$ (rad) [a- > pi/4]",
+        binning=(32, -1, 1),
+        x_title=r"Gen $\omega_{vis}$ [Leading tau]",
     )
     cfg.add_variable(
-        name="PhiCP_IPDP_alpha_lt_piby4",
-        expression="PhiCP_IPDP_alpha_lt_piby4",
+        name="gen_omegavis_2",
+        expression="gen_omegavis_2",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-NP}$ (rad) [a- < pi/4]",
+        binning=(32, -1, 1),
+        x_title=r"Gen $\omega_{vis}$ [Tau]",
     )
     cfg.add_variable(
-        name="PhiCP_IPDP_alpha_gt_piby4",
-        expression="PhiCP_IPDP_alpha_gt_piby4",
+        name="gen_massvis",
+        expression="gen_massvis",
         null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-NP}$ (rad) [a- > pi/4]",
-    )
-    cfg.add_variable(
-        name="PhiCPGen_IPIP_alpha_lt_piby4",
-        expression="PhiCPGen_IPIP_alpha_lt_piby4",
-        null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-IP}$ (rad) [a- < pi/4] [Gen Level]",
-    )
-    cfg.add_variable(
-        name="PhiCPGen_IPIP_alpha_gt_piby4",
-        expression="PhiCPGen_IPIP_alpha_gt_piby4",
-        null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-IP}$ (rad) [a- > pi/4] [Gen Level]",
-    )
-    cfg.add_variable(
-        name="PhiCPGen_IPDP_alpha_lt_piby4",
-        expression="PhiCPGen_IPDP_alpha_lt_piby4",
-        null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-NP}$ (rad) [a- < pi/4] [Gen Level]",
-    )
-    cfg.add_variable(
-        name="PhiCPGen_IPDP_alpha_gt_piby4",
-        expression="PhiCPGen_IPDP_alpha_gt_piby4",
-        null_value=EMPTY_FLOAT,
-        binning=(int(2*np.pi/(0.1*np.pi)), 0, 2*np.pi),
-        x_title=r"$\Phi_{CP}^{IP-NP}$ (rad) [a- > pi/4] [Gen Level]",
+        binning=(20, 40, 120),
+        x_title=r"Gen $m_{vis}$ (GeV)",
     )
 
     

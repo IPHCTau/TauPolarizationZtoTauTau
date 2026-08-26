@@ -10,9 +10,9 @@ from scinum import Number
 # ------------------------ #
 # The main analysis object #
 # ------------------------ #
-analysis_zttpol_mutau = ana = od.Analysis(
-    name="analysis_zttpol_mutau",
-    id=3,
+analysis_zttpol_mumu = ana = od.Analysis(
+    name="analysis_zttpol_mumu",
+    id=6,
 )
 
 # analysis-global versions
@@ -44,9 +44,9 @@ ana.x.config_groups = {}
 # ------------- #
 
 from zttpol.config.build_analysis import *
-build_analysis(analysis=analysis_zttpol_mutau,
+build_analysis(analysis=analysis_zttpol_mumu,
                era=2018,
                postfix="",
-               channel="mutau",
-               islimited=True,
-               isfull=False)
+               channel="mumu",
+               islimited=False,
+               isfull=True)
