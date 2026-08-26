@@ -6,11 +6,10 @@ ak = maybe_import("awkward")
 coffea = maybe_import("coffea")
 
 from zttpol.production.PolarimetricA1 import PolarimetricA1
-from zttpol.production.helper import getlistofobservables, getCombOMEGA
+from zttpol.production.helper import getlistofobservables, getCombOMEGA, to_cartesian
 from zttpol.production.piHelper import piHelper
 from zttpol.production.rhoHelper import rhoHelper
 from zttpol.production.a1Helper import a1Helper
-
 
 
 
@@ -255,11 +254,15 @@ def get_observables_tautau(ztollP4 : dict,
             a1ObsCalc = a1Helper(tau_p4 = ztollP4['p4z2'],
                                  tau_pi_p4 = ztollP4['p4z2pi'],
                                  debug = True)
-            omegabar_2 = a1ObsCalc.getOmegaBar()
-            obs_temp['omegabar_2'] = omegabar_2
             massvis = (ztollP4['p4z1pi'] + a1ObsCalc.LFa1LV).mass
             obs_temp['massvis'] = massvis
 
+            #p4_z1_fmtt, p4_z2_fmtt = apply_fastMTT()
+            
+            
+            omegabar_2 = a1ObsCalc.getOmegaBar()
+            obs_temp['omegabar_2'] = omegabar_2
+            
         else:
             raise RuntimeWarning(f"wrong leg2 : {leg2}")
             

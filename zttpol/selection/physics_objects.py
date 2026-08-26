@@ -16,6 +16,7 @@ from columnflow.production.util import attach_coffea_behavior
 from zttpol.util import (
     IF_NANO_V9, IF_NANO_V11, IF_RUN2, IF_RUN3, getGenTauDecayMode
 )
+
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 coffea = maybe_import("coffea")
@@ -73,10 +74,7 @@ def muon_selection(
         "muon_mediumID"       : muons.mediumId == 1,
         "muon_dxy_0p045"      : abs(muons.dxy) < 0.045,
         "muon_dz_0p2"         : abs(muons.dz) < 0.2,
-        #"muon_iso_0p15"       : muons.pfRelIso04_all < 0.15, # For SR, moved to categorization
         "muon_iso_0p5"        : muons.pfRelIso04_all < 0.5, # new categorization following DESY setup 
-        # not before applying correction from IPsig calibration
-        #"muon_ipsig_1p0"      : np.abs(muons.IPsig) > 1.0,
     }
     single_veto_selections = {
         "muon_pt_10"          : muons.pt > 10,
@@ -140,14 +138,11 @@ def muon_selection(
         objects={
             "Muon": {
                 "RawMuon": raw_muon_indices,
-                "SortedMuon": sorted_muon_indices,
-                "GoodMuon": good_muon_indices,
-                "VetoMuon": single_veto_muon_indices,
-                "DoubleVetoMuon": double_veto_muon_indices,
+                "PreSelMuon": good_muon_indices,
             },
         },
         aux={
-            "muon_good_selection": good_selection_steps,
+            "muon_pre_selection": good_selection_steps,
             "muon_single_veto_selection": single_veto_selection_steps,
             "muon_double_veto_selection": double_veto_selection_steps,
         }
@@ -163,12 +158,7 @@ def muon_selection(
 # ------------------------------------------------------------------------------------------------------- #
 @selector(
     uses={
-        "Electron.pt", "Electron.eta", "Electron.phi", "Electron.mass", "Electron.dxy", "Electron.dz",
-        "Electron.pfRelIso03_all", "Electron.convVeto", #"lostHits",
-        IF_NANO_V9("Electron.mvaFall17V2Iso_WP80", "Electron.mvaFall17V2Iso_WP90", "Electron.mvaFall17V2noIso_WP90"),
-        IF_NANO_V11("Electron.mvaIso_WP80", "Electron.mvaIso_WP90", "Electron.mvaNoIso_WP90"),
-        "Electron.cutBased",
-        "Electron.IPx", "Electron.IPy", "Electron.IPz", "Electron.sip3d",
+        "Electron.{pt,eta,phi,mass,dxy,dz,pfRelIso03_all,convVeto,lostHits,mvaIso_WP80,mvaIso_WP90,mvaNoIso_WP90,cutBased,IPx,IPy,IPz,sip3d}",
         optional("Electron.genPartFlav"),
     },
     produces={
@@ -197,7 +187,6 @@ def electron_selection(
     # make sure that there is no nan sip3d
     ipsig_dummy = 0.0 #-999.9
     events = set_ak_column(events, "Electron.IPsig", ak.nan_to_num(events.Electron.sip3d, nan=ipsig_dummy))
-    #events = set_ak_column(events, "Electron.isolation", -1.0)
     events = set_ak_column(events, "Electron.isolation", events.Electron.pfRelIso03_all, value_type=np.float32)
 
     events = set_ak_column(events, "Electron.SVx", 0.0)
@@ -218,10 +207,8 @@ def electron_selection(
         "electron_eta_2p5"        : abs(electrons.eta) < 2.5,
         "electron_dxy_0p045"      : abs(electrons.dxy) < 0.045,
         "electron_dz_0p2"         : abs(electrons.dz) < 0.2,
-        "electron_mva_iso_wp80"   : mva_iso_wp80 == 1,
-        "electron_iso_0p15"       : electrons.pfRelIso03_all < 0.5,
-        # not before applying correction from IPsig calibration        
-        #"electron_ipsig_1p0"      : np.abs(electrons.IPsig) > 1.0,
+        "electron_mva_iso_wp80"   : ((mva_iso_wp80 == 1) | (mva_iso_wp90 == 1)),
+        "electron_iso_0p5"        : electrons.pfRelIso03_all < 0.5,
     }
     single_veto_selections = {
         "electron_pt_10"          : electrons.pt > 10,
@@ -230,7 +217,7 @@ def electron_selection(
         "electron_dz_0p2"         : abs(electrons.dz) < 0.2,
         "electron_mva_noniso_wp90": mva_noniso_wp90 == 1,
         "electron_convVeto"       : electrons.convVeto == 1,
-        #"electron_lostHits"       : electrons.lostHits <= 1,
+        "electron_lostHits"       : electrons.lostHits <= 1,
         "electron_iso_0p3"        : electrons.pfRelIso03_all < 0.3,
     }
     double_veto_selections = {
@@ -285,10 +272,7 @@ def electron_selection(
         objects={
             "Electron": {
                 "RawElectron": raw_electron_indices,
-                "SortedElectron": sorted_electron_indices,
-                "GoodElectron": good_electron_indices,
-                "VetoElectron": single_veto_electron_indices,
-                "DoubleVetoElectron": double_veto_electron_indices,
+                "PreSelElectron": good_electron_indices,
             },
         },
         aux={
@@ -300,11 +284,14 @@ def electron_selection(
 
 
 @electron_selection.init
-def electron_selection_init(self) -> None:
+def electron_selection_init(self: Selector, **kwargs) -> None:
+    super(electron_selection, self).init_func(**kwargs)
+
+    # register all eec/eer shifts
     if self.config_inst.campaign.x.run == 3:
         self.shifts |= {
             shift_inst.name for shift_inst in self.config_inst.shifts
-            if shift_inst.has_tag(("ees", "eer"))
+            if shift_inst.has_tag(("eec", "eer"))
         }
 
 
@@ -315,9 +302,15 @@ def electron_selection_init(self) -> None:
 #   http://cms.cern.ch/iCMS/jsp/openfile.jsp?tp=draft&files=AN2019_192_v15.pdf
 # ------------------------------------------------------------------------------------------------------- #
 @selector(
-    uses={"Tau.{pt,eta,phi,dz,idDeepTau2018v2p5VSe,idDeepTau2018v2p5VSmu,idDeepTau2018v2p5VSjet,decayMode,decayModePNet,ipLengthSig,hasRefitSV,refitSVx,refitSVy,refitSVz}", optional("Tau.genPartFlav")},
+    uses={
+        "Tau.{pt,eta,phi,dz,idDeepTau2018v2p5VSe,idDeepTau2018v2p5VSmu,idDeepTau2018v2p5VSjet,decayMode,ipLengthSig,hasRefitSV,refitSVx,refitSVy,refitSVz}",
+        optional("Tau.genPartFlav")
+    },
     produces={
-        "Tau.{rawIdx,decayMode,decayModeHPS,IPsig,isolation,SVx,SVy,SVz}"
+        f"Tau.{var}" for var in [
+            "rawIdx", "IPsig", "isolation",
+            "SVx", "SVy", "SVz",
+        ]
     },
     exposed=False,
 )
@@ -337,8 +330,6 @@ def tau_selection(
 
     events = set_ak_column(events, "Tau.rawIdx", tau_local_indices)
     # to get rid of any nan values
-    #from IPython import embed; embed()
-    #ipsig_dummy = ak.max(events.Tau.ipLengthSig) + np.abs(ak.min(events.Tau.ipLengthSig))
     ipsig_dummy = 0.0
     events = set_ak_column(events, "Tau.IPsig",  ak.nan_to_num(events.Tau.ipLengthSig, nan=ipsig_dummy))
     events = set_ak_column(events, "Tau.isolation", events.Tau.idDeepTau2018v2p5VSjet, value_type=np.float32)
@@ -347,44 +338,28 @@ def tau_selection(
     events = set_ak_column(events, "Tau.SVy", ak.nan_to_num(events.Tau.refitSVy, 0.0))
     events = set_ak_column(events, "Tau.SVz", ak.nan_to_num(events.Tau.refitSVz, 0.0))
     
-    # https://cms-nanoaod-integration.web.cern.ch/integration/cms-swmaster/data106Xul17v2_v10_doc.html#Tau
-    tau_vs_e = DotDict(vvloose=2, vloose=3)
-    tau_vs_mu = DotDict(vloose=1, tight=4)
-    tau_vs_jet = DotDict(vvloose=2, loose=4, medium=5)
+    #if "decayModeHPS" not in events.Tau.fields:
+    #    events = set_ak_column(events, "Tau.decayModeHPS", events.Tau.decayMode)      # explicitly renaming decayMode to decayModeHPS
+    #    events = set_ak_column(events, "Tau.decayMode",    events.Tau.decayModePNet)  # set decayModePNet as decayMode
     
-    tau_tagger         = self.config_inst.x.deep_tau_tagger
-    tau_tagger_wps     = self.config_inst.x.deep_tau_info[tau_tagger].wp
-
-    if "decayModeHPS" not in events.Tau.fields:
-        events = set_ak_column(events, "Tau.decayModeHPS", events.Tau.decayMode)      # explicitly renaming decayMode to decayModeHPS
-        events = set_ak_column(events, "Tau.decayMode",    events.Tau.decayModePNet)  # set decayModePNet as decayMode
-    
-
     sorted_indices = ak.argsort(events.Tau.pt, axis=-1, ascending=False)
     taus = events.Tau[sorted_indices]
 
     good_selections = {
         "tau_pt_15"     : taus.pt > 18.0, # 20 GeV is in pair selection
-        "tau_eta_2p5"   : abs(taus.eta) < 2.5, # 2.3
+        "tau_eta_2p5"   : abs(taus.eta) < 2.5,
         "tau_dz_0p2"    : abs(taus.dz) < 0.2,
-        # have to make them channel-specific later
-        #                  e-tau  mu-tau  tau-tau     SafeHere
-        #   DeepTauVSjet : Tight  Medium  Medium  --> Medium  
-        #   DeepTauVSe   : Tight  VVLoose VVLoose --> VVLoose 
-        #   DeepTauVSmu  : Loose  Tight   VLoose  --> VLoose  
-        "tau_DeepTauVSjet"  : taus.idDeepTau2018v2p5VSjet >= tau_tagger_wps.vs_j.VVVLoose, # for tautau fake region
-        "tau_DeepTauVSe"    : taus.idDeepTau2018v2p5VSe   >= tau_tagger_wps.vs_e.VVLoose,
-        "tau_DeepTauVSmu"   : taus.idDeepTau2018v2p5VSmu  >= tau_tagger_wps.vs_m.VLoose,
-        "tau_HPSDMveto_5or6" : ((taus.decayModeHPS != 5) & (taus.decayModeHPS != 6)),
-        "tau_no_undefinedPNetDM": (taus.decayMode != -1),
+        "tauIDvsJet"    : taus.idDeepTau2018v2p5VSjet >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_j.VVVLoose,
+        "tauIDvsEle"    : taus.idDeepTau2018v2p5VSe   >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_e.VVLoose,
+        "tauIDvsMu"     : taus.idDeepTau2018v2p5VSmu  >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_m.VLoose,
+        "tau_HPSDMveto_5or6" : ((taus.decayMode != 5) & (taus.decayMode != 6)),
+        #"tau_no_undefinedPNetDM": (taus.decayMode != -1),
         "tau_DecayMode"  : (
             (taus.decayMode ==  0)
-            | ((taus.decayMode ==  1) & (taus.decayModeHPS == 1))
-            | ((taus.decayMode ==  2) & (taus.decayModeHPS == 1))
+            | (taus.decayMode == 1)
             | ((taus.decayMode ==  10) & taus.hasRefitSV)
-            #| ((taus.decayMode ==  11) & taus.hasRefitSV)
+            | ((taus.decayMode ==  11) & taus.hasRefitSV)
         ),
-        "tau_DM0_IPsig_1p25" : ak.where(taus.decayMode == 0, np.abs(taus.IPsig) >= 1.25, True),
     }
     
     tau_mask = ak.local_index(taus) >= 0
@@ -417,8 +392,7 @@ def tau_selection(
         objects={
             "Tau": {
                 "RawTau": raw_tau_indices,
-                "SortedTau": sorted_tau_indices,
-                "GoodTau": good_tau_indices,
+                "PreSelTau": good_tau_indices,
             },
         },
         aux=selection_steps,
@@ -426,7 +400,9 @@ def tau_selection(
 
 
 @tau_selection.init
-def tau_selection_init(self: Selector) -> None:
+def tau_selection_init(self: Selector, **kwargs) -> None:
+    super(tau_selection, self).init_func(**kwargs)
+    
     # register tec shifts
     self.shifts |= {
         shift_inst.name
@@ -443,9 +419,15 @@ def tau_selection_init(self: Selector) -> None:
 #   http://cms.cern.ch/iCMS/jsp/openfile.jsp?tp=draft&files=AN2019_192_v15.pdf
 # ------------------------------------------------------------------------------------------------------- #
 @selector(
-    uses={ "Jet.{pt,eta,phi,mass,jetId,btagDeepFlavB,neHEF,neEmEF,chMultiplicity,neMultiplicity,chHEF,chMultiplicity,muEF,chEmEF}",
-           optional("Jet.puId"), optional("Jet.genJetIdx"), optional("GenJet.*"), attach_coffea_behavior},
-    produces={"Jet.rawIdx"},
+    uses={
+        "Jet.{pt,eta,phi,mass,jetId}",
+        optional("Jet.genJetIdx"),
+        optional("GenJet.*"),
+        attach_coffea_behavior,
+    },
+    produces={
+        "Jet.rawIdx",
+    },
     exposed=False,
 )
 def jet_selection(
@@ -460,44 +442,14 @@ def jet_selection(
     is_run3 = self.config_inst.campaign.x.run == 3
 
     jet_mask  = ak.local_index(events.Jet.pt) >= 0 #Create a mask filled with ones
-
-    # Redefination of JetID because of the bug in NanoAOD v12-v15
-    # https://gitlab.cern.ch/cms-jetmet/coordination/coordination/-/issues/117
-    passJetIdTight = ak.where(np.abs(events.Jet.eta) <= 2.6,
-                              ((events.Jet.neHEF < 0.99)
-                               & (events.Jet.neEmEF < 0.9)
-                               & (events.Jet.chMultiplicity + events.Jet.neMultiplicity > 1)
-                               & (events.Jet.chHEF > 0.01)
-                               & (events.Jet.chMultiplicity > 0)),  # Tight criteria for abs_eta <= 2.6
-                              ak.where((np.abs(events.Jet.eta) > 2.6) & (np.abs(events.Jet.eta) <= 2.7),
-                                       ((events.Jet.neHEF < 0.9)
-                                        & (events.Jet.neEmEF < 0.99)),  # Tight criteria for 2.6 < abs_eta <= 2.7
-                                       ak.where((np.abs(events.Jet.eta) > 2.7) & (np.abs(events.Jet.eta) <= 3.0),
-                                                events.Jet.neHEF < 0.99,  # Tight criteria for 2.7 < abs_eta <= 3.0
-                                                ((events.Jet.neMultiplicity >= 2) & (events.Jet.neEmEF < 0.4))  # Tight criteria for abs_eta > 3.0
-                                                )
-                                       )
-                              )
-    
-    # Default tight lepton veto
-    passJetIdTightLepVeto = ak.where(
-        np.abs(events.Jet.eta) <= 2.7,
-        (passJetIdTight & (events.Jet.muEF < 0.8) & (events.Jet.chEmEF < 0.8)),  # add lepton veto for abs_eta <= 2.7
-        passJetIdTight  # No lepton veto for 2.7 < abs_eta
-    )
-    
-        
+            
     # nominal selection
     good_selections = {
         "jet_pt_20"               : events.Jet.pt > 20.0,
         "jet_eta_4p7"             : abs(events.Jet.eta) <= 4.7,
         "jet_special_for_PU"      : ak.where(((abs(events.Jet.eta) >= 2.5) & (abs(events.Jet.eta) < 3.0)), events.Jet.pt > 50.0, jet_mask),
         "jet_forward"             : ak.where((abs(events.Jet.eta) >= 3.0), events.Jet.pt > 30.0, jet_mask),
-        # use the newly defined TightLepVeto ID
-        #"jet_id"                  : events.Jet.jetId >= 2,  # Jet ID flag: bit2 is tight, bit3 is tightLepVeto            
-                                                            # So, 0000010 : 2**1 = 2 : pass tight, fail lep-veto          
-                                                            #     0000110 : 2**1 + 2**2 = 6 : pass both tight and lep-veto
-        "jet_id"                  : passJetIdTightLepVeto,
+        "jet_id"                  : (events.Jet.jetId & 4) != 0, #passJetIdTightLepVeto,
     }
         
     events = set_ak_column(events, "Jet.rawIdx", ak.local_index(events.Jet.pt))    
@@ -517,7 +469,7 @@ def jet_selection(
         objects = {
             "Jet": {
                 "RawJet": events.Jet.rawIdx,
-                "SortedJet": sorted_indices,
+                "PreSelJet": sorted_indices,
             },
         },
         aux = selection_steps,
@@ -527,7 +479,9 @@ def jet_selection(
 
 
 @jet_selection.init
-def jet_selection_init(self: Selector) -> None:
+def jet_selection_init(self: Selector, **kwargs) -> None:
+    super(jet_selection, self).init_func(**kwargs)
+    
     # register shifts
     self.shifts |= {
         shift_inst.name
@@ -539,7 +493,7 @@ def jet_selection_init(self: Selector) -> None:
 
 
 @selector(
-    uses={"Jet.{pt,eta,phi,mass,jetId,btagDeepFlavB}",
+    uses={"Jet.{pt,eta,phi,mass,btagDeepFlavB,btagUParTAK4B}",
           "zcand.{pt,eta,phi,mass,decayMode}",
           optional("cross_triggered"),
           optional("cross_jet_triggered"),
@@ -575,8 +529,8 @@ def jet_cleaning(
         good_jet_indices = good_clean_jets.rawIdx
 
     # b-tagged jets, tight working point
-    btag_wp = self.config_inst.x.btag_working_points.deepjet.medium
-    b_jet_mask = (np.abs(events.Jet[good_jet_indices].eta) < 2.5) & (events.Jet[good_jet_indices].btagDeepFlavB >= btag_wp)
+    btag_info = self.config_inst.x.btag_upart
+    b_jet_mask = (np.abs(events.Jet[good_jet_indices].eta) < 2.5) & (events.Jet[good_jet_indices][btag_info.jet_column] >= btag_info.wp)
     b_jet_indices = good_jet_indices[b_jet_mask]
     selection_steps["jet_isbtag"] = ak.fill_none(b_jet_mask, False)
 
@@ -637,8 +591,8 @@ def jet_cleaning(
 @selector(
     uses={
         "GenPart.*",
-        "zcand.pt", "zcand.eta", "zcand.phi", "zcand.mass",
-        "PV.x", "PV.y", "PV.z",
+        "zcand.{pt,eta,phi,mass}",
+        "PV.{x,y,z}",
     },
     produces={
         'GenPart.rawIdx',
@@ -818,9 +772,13 @@ def gentau_selection(
     ### IMPACT PARAMETER ###
     # from IPython import embed; embed()
     # Displacement vector L components
-    Lx = prod.vx - events.PV.x
-    Ly = prod.vy - events.PV.y
-    Lz = prod.vz - events.PV.z
+    Lx = events.PV.x
+    Ly = events.PV.y
+    Lz = events.PV.z
+    if 'vx' in prod.fields:
+        Lx = prod.vx - events.PV.x
+        Ly = prod.vy - events.PV.y
+        Lz = prod.vz - events.PV.z
     # Direction vector d components (normalized momentum of GenTau)
     # Calculate px, py, pz from pt, eta, phi
     prod_px = prod.pt * np.cos(prod.phi)

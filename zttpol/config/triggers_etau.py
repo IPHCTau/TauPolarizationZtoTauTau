@@ -41,7 +41,7 @@ def add_triggers_2016(config: od.Config, postfix: str) -> None:
 # ----------------------------------------------- #
 #                   Run2 2017 UL                  #
 # ----------------------------------------------- #
-def add_triggers_2017(config: od.Config) -> None:
+def add_triggers_2017(config: od.Config, postfix: str) -> None:
     """
     Adds all triggers to a *config*. For the conversion from filter names to trigger bits, see
     https://github.com/cms-sw/cmssw/blob/master/PhysicsTools/NanoAOD/python/triggerObjects_cff.py.
@@ -109,7 +109,7 @@ def add_triggers_2017(config: od.Config) -> None:
 # ----------------------------------------------- #
 #                   Run2 2018 UL                  #
 # ----------------------------------------------- #
-def add_triggers_2018(config: od.Config) -> None:
+def add_triggers_2018(config: od.Config, postfix: str) -> None:
     """
     Adds all triggers to a *config*. For the conversion from filter names to trigger bits, see
     https://github.com/cms-sw/cmssw/blob/master/PhysicsTools/NanoAOD/python/triggerObjects_cff.py.
@@ -118,30 +118,35 @@ def add_triggers_2018(config: od.Config) -> None:
         # ===>>> single electron
         Trigger(
             name="HLT_Ele32_WPTight_Gsf",
-            id=111000,
+            id=11001,
             legs=[
                 TriggerLeg(
                     pdg_id=11,
-                    min_pt=33.0,
-                    max_abseta=None,
+                    min_pt=34.0,
+                    min_pt_online=32.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltEle32WPTightGsfTrackIsoFilter
-                    trigger_bits=2,
+                    trigger_bits=2**1,
                 ),
             ],
+            #applies_to_dataset=(lambda dataset_inst: dataset_inst.is_mc or dataset_inst.x.era >= "D"),
             tags={"single_trigger", "single_e", "channel_e_tau"},
         ),
         Trigger(
             name="HLT_Ele35_WPTight_Gsf",
-            id=112000,
+            id=11002,
             legs=[
                 TriggerLeg(
                     pdg_id=11,
-                    min_pt=33.0,
-                    max_abseta=None,
+                    min_pt=37.0,
+                    min_pt_online=35.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltEle35noerWPTightGsfTrackIsoFilter
-                    trigger_bits=2,
+                    trigger_bits=2**1,
                 ),
             ],
             tags={"single_trigger", "single_e", "channel_e_tau"},
@@ -154,21 +159,25 @@ def add_triggers_2018(config: od.Config) -> None:
             legs=[
                 TriggerLeg(
                     pdg_id=11,
-                    min_pt=26.0, #25.0,
-                    max_abseta=2.1, #None,
+                    min_pt=26.0,
+                    min_pt_online=24.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltEle24erWPTightGsfTrackIsoFilterForTau
                     # hltOverlapFilterIsoEle24WPTightGsfLooseIsoPFTau30
-                    trigger_bits=64, #2 + 64,
+                    trigger_bits=2**1 + 2**6, #2 + 64,
                 ),
                 TriggerLeg(
                     pdg_id=15,
                     min_pt=35.0,
-                    max_abseta=2.1, #None,
+                    min_pt_online=30.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltSelectedPFTau30LooseChargedIsolationL1HLTMatched
                     # hltOverlapFilterIsoEle24WPTightGsfLooseIsoPFTau30
-                    trigger_bits=256, #1024 + 256,
+                    trigger_bits=2**8 + 2**10,
                 ),
             ],
             applies_to_dataset=(lambda dataset_inst: dataset_inst.is_data and dataset_inst.x.era <= "B"),
@@ -181,21 +190,25 @@ def add_triggers_2018(config: od.Config) -> None:
             legs=[
                 TriggerLeg(
                     pdg_id=11,
-                    min_pt=26.0, #25.0,
-                    max_abseta=2.1, #None,
+                    min_pt=26.0,
+                    min_pt_online=24.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltEle24erWPTightGsfTrackIsoFilterForTau
                     # hltOverlapFilterIsoEle24WPTightGsfLooseIsoPFTau30
-                    trigger_bits=2 + 64,
+                    trigger_bits=2**1 + 2**6,
                 ),
                 TriggerLeg(
                     pdg_id=15,
                     min_pt=35.0,
-                    max_abseta=2.1, #None,
+                    min_pt_online=30.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltSelectedPFTau30LooseChargedIsolationL1HLTMatched
                     # hltOverlapFilterIsoEle24WPTightGsfLooseIsoPFTau30
-                    trigger_bits=1024 + 256,
+                    trigger_bits=2**8 + 2**10,
                 ),
             ],
             applies_to_dataset=(lambda dataset_inst: dataset_inst.is_mc or dataset_inst.x.era >= "B"),

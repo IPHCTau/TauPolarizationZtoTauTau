@@ -50,6 +50,9 @@ def get_energy_split(h, pions, pizeros):
         "Electron.*",
         "Tau.*",
     },
+    produces={
+        "zcand.{pt,eta,phi,mass,charge,rawIdx,decayMode,IPsig,isolation,genPartFlav,SVx,SVy,SVz,IPx,IPy,IPz}",
+    },
     exposed=False,
 )
 def selzcand(
@@ -62,42 +65,30 @@ def selzcand(
         
     sel_zcand = ak.fill_none(ak.num(lep_pair.pt, axis=-1) == 2, False)
     
-    zcand = None
-    if self.config_inst.campaign.x.run == 3 :
-        zcand = enforce_zcand_type(lep_pair, 
-                                   {"pt"            : "float64",
-                                    "eta"           : "float64",
-                                    "phi"           : "float64",
-                                    "mass"          : "float64",
-                                    "charge"        : "int32",
-                                    "decayMode"     : "int32",
-                                    "decayModeHPS"  : "int32",
-                                    "rawIdx"        : "int32",
-                                    "IPx"           : "float64",
-                                    "IPy"           : "float64",
-                                    "IPz"           : "float64",
-                                    "IPsig"         : "float64",
-                                    "isolation"     : "float32",
-                                    "genPartFlav"   : "int32",
-                                    "SVx"           : "float64",
-                                    "SVy"           : "float64",
-                                    "SVz"           : "float64",
-                                    }
-                                   )
-    else:
-        zcand = enforce_zcand_type(lep_pair, 
-                                   {"pt"            : "float64",
-                                    "eta"           : "float64",
-                                    "phi"           : "float64",
-                                    "mass"          : "float64",
-                                    "charge"        : "int32",
-                                    "decayMode"     : "int32",
-                                    "rawIdx"        : "int32",
-                                    "isolation"     : "float32",
-                                    "genPartFlav"   : "int32",
-                                    }
-                                   )
-        
+    zcand = enforce_zcand_type(lep_pair, 
+                               {"pt"            : "float64",
+                                "eta"           : "float64",
+                                "phi"           : "float64",
+                                "mass"          : "float64",
+                                "charge"        : "int32",
+                                "decayMode"     : "int32",
+                                #"decayModePNet" : "int32",
+                                "rawIdx"        : "int32",
+                                "IPx"           : "float64",
+                                "IPy"           : "float64",
+                                "IPz"           : "float64",
+                                "IPsig"         : "float64",
+                                "isolation"     : "float32",
+                                "genPartFlav"   : "int32",
+                                "SVx"           : "float64",
+                                "SVy"           : "float64",
+                                "SVz"           : "float64",
+                                }
+                               )
+
+    # saving zcand
+    events = set_ak_column(events, "zcand", zcand)
+    
     return events, zcand, SelectionResult(
         steps={
             "One_zcand_per_event": sel_zcand,
@@ -423,14 +414,13 @@ def build_hcand_mask(hcand, hcand_pi, hcand_pi0, dummy):
         "channel_id",
         "Electron.{pt,eta,phi,mass}",
         "Muon.{pt,eta,phi,mass}",
-        "Tau.{pt,eta,phi,mass}",
+        "Tau.{pt,eta,phi,mass,decayMode}",
         "TauProd.{pt,eta,phi,tauIdx}",
         assign_tauprod_mass_charge,
         #insert_calibrated_taus,
     },
     produces={
-        "zcand.{pt,eta,phi,mass,charge,rawIdx,decayMode,decayModeHPS,energy_split,IPsig,isolation,genPartFlav,SVx,SVy,SVz}",
-        IF_RUN3("zcand.IPx", "zcand.IPy", "zcand.IPz"),
+        #"zcand.{pt,eta,phi,mass,charge,rawIdx,decayMode,energy_split,IPsig,isolation,genPartFlav,SVx,SVy,SVz,IPx,IPy,IPz}",
         "zcandprod.{pt,eta,phi,mass,charge,pdgId,tauIdx}",
         assign_tauprod_mass_charge,
         #insert_calibrated_taus,
@@ -560,7 +550,7 @@ def selzcandprod(
                                            dim = "var * var")
 
     # saving hcand
-    events = set_ak_column(events, "zcand", zcand_array)
+    #events = set_ak_column(events, "zcand", zcand_array)
     # saving hcand E split
     zcand_E_split = ak.from_regular(ak.concatenate([zcand1_E_split, zcand2_E_split], axis=1), axis=1)
     zcand_E_split_dummy = ak.from_regular(zcand_E_split[:,:0], axis=1)
@@ -611,7 +601,7 @@ def selzcandprod(
         steps={
             "has_proper_tau_decay_products" : ak.sum(zcand_prod_mask, axis=1) == 2,
             "has_assigned_charge_properly"  : ak.sum(zcand_prod_charge_mask, axis=1) == 2,
-            "pass_energy_split_for_DM_1_2"  : (zcand1_pass_E_split_mask & zcand2_pass_E_split_mask),
+            #"pass_energy_split_for_DM_1_2"  : (zcand1_pass_E_split_mask & zcand2_pass_E_split_mask),
         }
     )
 

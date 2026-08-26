@@ -17,6 +17,8 @@ from scinum import Number
 
 from columnflow.util import DotDict, maybe_import, dev_sandbox
 from columnflow.columnar_util import ColumnCollection, EMPTY_FLOAT
+from columnflow.cms_util import CMSDatasetInfo
+
 from columnflow.config_util import (
     get_root_processes_from_campaign, 
     add_category,
@@ -35,6 +37,7 @@ ak = maybe_import("awkward")
 thisdir = "/afs/cern.ch/work/g/gsaha/public/IPHC/Work/ColumnFlowAnalyses/TauPolarizationZtoTauTau/zttpol/config"
 tooldir = os.path.join(os.path.dirname(thisdir), "data/tools")
 corrdir = os.path.join(os.path.dirname(thisdir), "data/corrections")
+#corrdir = "/eos/project/i/iphctau/public/common/JSONPOG_Corrections/metadata_26052026"
 
 def add_config (ana: od.Analysis,
                 campaign: od.Campaign,
@@ -92,18 +95,18 @@ def add_config (ana: od.Analysis,
 
     
     # combination of processes
-    cfg.add_process(
-        name="multiboson",
-        id=7999, # vv proc is 8000 and vvv is 9000 in cmsdb processes
-        label="VV(V)",
-        processes=[procs.n.vv, procs.n.vvv],
-    )
-    cfg.add_process(
-        name="top",
-        id=1999, 
-        label="top",
-        processes=[procs.n.tt, procs.n.st],
-    )
+    #cfg.add_process(
+    #    name="multiboson",
+    #    id=7999, # vv proc is 8000 and vvv is 9000 in cmsdb processes
+    #    label="VV(V)",
+    #    processes=[procs.n.vv, procs.n.vvv],
+    #)
+    #cfg.add_process(
+    #    name="top",
+    #    id=1999, 
+    #    label="top",
+    #    processes=[procs.n.tt, procs.n.st],
+    #)
     
     # --------------------------------------------------------------------------------------------- #
     # add processes we are interested in
@@ -112,28 +115,31 @@ def add_config (ana: od.Analysis,
         ## Data
         "data",
         ## W + jets
-        "w_lnu",
+        #"w_lnu",
         ## Drell-Yan
         "dy",
+        "dy_2tau_m50toinf_amcatnloFXFX",
+        "dy_2tau_m50toinf_amcatnloFXFX_LHEspin_minus",
+        "dy_2tau_m50toinf_amcatnloFXFX_LHEspin_plus",
         ## TTJets
         #"tt",
         ## Single top
-        #"st",
-        "top",
+        ##"st",
+        #"top",
         ## VV [diboson inclusive]
-        #"vv",
-        #"vvv",
-        "multiboson",
+        ##"vv",
+        ##"vvv",
+        #"multiboson",
         ## Signal
-        "h_ggf_htt",
-        #"h_ggf_htt_cpeven",
-        #"h_ggf_htt_cpmix",
-        #"h_ggf_htt_cpodd",
-        "vh_htt",
-        #"wh_htt",
-        "h_vbf_htt",
+        #"h_ggf_htt",
+        ##"h_ggf_htt_cpeven",
+        ##"h_ggf_htt_cpmix",
+        ##"h_ggf_htt_cpodd",
+        #"vh_htt",
+        ##"wh_htt",
+        #"h_vbf_htt",
         ##QCD
-        "qcd",
+        #"qcd",
     ]
 
     for process_name in process_names:
@@ -174,36 +180,37 @@ def add_config (ana: od.Analysis,
     dataset_names = [
         ##W+jets
         # --- LO --- #
-        "wj_incl_madgraph",
+        #"wj_incl_madgraph",
         ##Drell-Yan
-        "dy_lep_m50_madgraph",
-        "dy_lep_m50_amcatnlo",
+        #"dy_lep_m50_madgraph",
+        #"dy_lep_m50_amcatnlo",
         "dy_2tau_m50_0j_amcatnlo",
         "dy_2tau_m50_1j_amcatnlo",
         "dy_2tau_m50_2j_amcatnlo",
+        #"dy_2tau_m50_njets_amcatnlo", # dummy
         ## ttbar
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
+        #"tt_sl",
+        #"tt_dl",
+        #"tt_fh",
         ##single top
-        "st_tchannel_t",
-        "st_tchannel_tbar",
-        "st_tw_t_sl",
-        "st_tw_tb_sl",
-        "st_tw_t_dl",
-        "st_tw_tb_dl",
-        "st_tw_t_fh",
-        "st_tw_tb_fh",
+        #"st_tchannel_t",
+        #"st_tchannel_tbar",
+        #"st_tw_t_sl",
+        #"st_tw_tb_sl",
+        #"st_tw_t_dl",
+        #"st_tw_tb_dl",
+        #"st_tw_t_fh",
+        #"st_tw_tb_fh",
         ##Diboson
-        "ww",
-        "wz",
-        "zz",
+        #"ww",
+        #"wz",
+        #"zz",
         ##Triboson
-        "www",
-        "wwz",
-        "wzz",
-        "zzz",
-        #"qcd",
+        #"www",
+        #"wwz",
+        #"wzz",
+        #"zzz",
+        ##"qcd",
     ]
 
     cfg.x.signal_filter_efficiency = DotDict.wrap({
@@ -220,8 +227,11 @@ def add_config (ana: od.Analysis,
     datasets_data = []
     if year == 2022:
         if postfix == "preEE":
-            datasets_data = ["data_e_C",   "data_e_D",
-                             "data_single_mu_C",
+            #datasets_data = ["data_e_C",   "data_e_D",
+            #                 "data_single_mu_C",
+            #                 "data_mu_C",  "data_mu_D", 
+            #                 "data_tau_C", "data_tau_D"]
+            datasets_data = ["data_single_mu_C",
                              "data_mu_C",  "data_mu_D", 
                              "data_tau_C", "data_tau_D"]
 
@@ -411,37 +421,37 @@ def add_config (ana: od.Analysis,
         },
     }
     """
-    cfg.x.dy_stitching = {
-        "dy": {
-            "inclusive_dataset": cfg.datasets.n.dy_lep_m50_amcatnlo,
-            "leaf_processes": [
-                # the following processes cover the full njet and pt phasespace
-                procs.n.dy_m50toinf_0j,
-                *(
-                    procs.get(f"dy_m50toinf_{nj}j_pt{pt}")
-                    for nj in [1, 2]
-                    for pt in ["0to40", "40to100", "100to200", "200to400", "400to600", "600toinf"]
-                ),
-                procs.n.dy_m50toinf_ge3j,
-            ],
-        },
-    }
+    #cfg.x.dy_stitching = {
+    #    "dy": {
+    #        "inclusive_dataset": cfg.datasets.n.dy_lep_m50_amcatnlo,
+    #        "leaf_processes": [
+    #            # the following processes cover the full njet and pt phasespace
+    #            procs.n.dy_m50toinf_0j,
+    #            *(
+    #                procs.get(f"dy_m50toinf_{nj}j_pt{pt}")
+    #                for nj in [1, 2]
+    #                for pt in ["0to40", "40to100", "100to200", "200to400", "400to600", "600toinf"]
+    #            ),
+    #            procs.n.dy_m50toinf_ge3j,
+    #        ],
+    #    },
+    #}
 
     cfg.x.allow_w_stitching = False
     cfg.x.allow_w_stitching_for_plotting = False
     # w+jets [NLO]
-    cfg.x.w_stitching = {
-        "wj": {
-            "inclusive_dataset": cfg.datasets.n.wj_incl_madgraph,
-            "leaf_processes": [
-                # the following processes cover the full njet phasespace
-                *(
-                    procs.get(f"w_lnu_{nj}j") # njet from LO samples
-                    for nj in [0,1,2,3,4]
-                ),
-            ],
-        },
-    }
+    #cfg.x.w_stitching = {
+    #    "wj": {
+    #        "inclusive_dataset": cfg.datasets.n.wj_incl_madgraph,
+    #        "leaf_processes": [
+    #            # the following processes cover the full njet phasespace
+    #            *(
+    #                procs.get(f"w_lnu_{nj}j") # njet from LO samples
+    #                for nj in [0,1,2,3,4]
+    #            ),
+    #        ],
+    #    },
+    #}
     """
     cfg.x.w_stitching = {
         "wj": {
@@ -635,31 +645,31 @@ def add_config (ana: od.Analysis,
             "golden"  : (goldenjson,  "v1"),  # noqa
             "normtag" : (normtagjson, "v1"),
         },
-        # https://gitlab.cern.ch/cms-analysis-corrections/LUM
+        # https://cms-analysis-corrections.docs.cern.ch/corrections/LUM/
         "pu_sf"             : (f"{corrdir}/LUM/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/puWeights.json.gz",   "v1"), # PU
-        # https://gitlab.cern.ch/cms-analysis-corrections/JME
+        # https://cms-analysis-corrections.docs.cern.ch/corrections/JME/
         "jet_jerc"          : (f"{corrdir}/JME/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/jet_jerc.json.gz",    "v1"), # JEC
         "jet_veto_map"      : (f"{corrdir}/JME/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/jetvetomaps.json.gz", "v1"), # JetVeto
         "met_phi_corr"      : (f"{corrdir}/JME/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/met_xyCorrections_{year}_{year}{year_postfix}.json.gz", ""), # MET XY Correction
-        # https://gitlab.cern.ch/cms-analysis-corrections/MUO
+        # https://cms-analysis-corrections.docs.cern.ch/corrections/MUO/
         "muon_sf"           : (f"{corrdir}/MUO/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/muon_Z.json.gz", "v1"), # Mu POG SF
         "muon_sr"           : (f"{corrdir}/MUO/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/muon_scalesmearing.json.gz", "v1"), # Mu Scale Smearing
         "muon_sr_tools"     : (f"{tooldir}/MuonScaReKIT/scripts/MuonScaRe.py", ""),
-        # -- https://gitlab.cern.ch/cclubbtautau/AnalysisCore/-/blob/main/data/TriggerScaleFactors/2022preEE/CrossMuTauHlt.json?ref_type=heads
-        "muon_xtrig_sf"     : (f"{corrdir}/MUO/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/CrossMuTauHlt.json",  "v1"), # Mu xTrig SF
-        # https://gitlab.cern.ch/cms-analysis-corrections/EGM
+        # .. https://gitlab.cern.ch/cclubbtautau/AnalysisCore/-/blob/main/data/TriggerScaleFactors/2022preEE/CrossMuTauHlt.json?ref_type=heads
+        "muon_xtrig_sf"     : (f"{corrdir}/MUO/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12_Extra/CrossMuTauHlt.json",  "v1"), # Mu xTrig SF
+        # https://cms-analysis-corrections.docs.cern.ch/corrections/EGM/
         "electron_sf"       : (f"{corrdir}/EGM/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/electron.json.gz",    "v1"), # Ele POG SF
         "electron_trig_sf"  : (f"{corrdir}/EGM/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/electronHlt.json.gz", "v1"), # Ele HLT SF
         "electron_ss"       : (f"{corrdir}/EGM/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/electronSS_EtDependent.json.gz",  "v1"), # Ele Scale Smearing
-        # -- https://gitlab.cern.ch/cclubbtautau/AnalysisCore/-/blob/main/data/TriggerScaleFactors/2022preEE/CrossEleTauHlt.json?ref_type=heads
-        "electron_xtrig_sf" : (f"{corrdir}/EGM/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/CrossEleTauHlt.json", "v1"), # Ele xTrig SF
-        # https://gitlab.cern.ch/cms-analysis-corrections/TAU
+        # .. https://gitlab.cern.ch/cclubbtautau/AnalysisCore/-/blob/main/data/TriggerScaleFactors/2022preEE/CrossEleTauHlt.json?ref_type=heads
+        "electron_xtrig_sf" : (f"{corrdir}/EGM/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12_Extra/CrossEleTauHlt.json", "v1"), # Ele xTrig SF
+        # https://cms-analysis-corrections.docs.cern.ch/corrections/TAU/
         "tau_sf"            : (f"{corrdir}/TAU/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/tau.json.gz", "v1"), # TEC and ID SF from POG (VsJet Medium WP only)
-        "gen_tau_sf"        : (f"{corrdir}/TAU/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/tau_sf_pt-dm_DeepTau2018v2p5VSjet_{year}_{postfix}.json.gz", "v1"), # Tau ID SF (NEW FROM IC)
-        "tes_sf"            : (f"{corrdir}/TAU/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/tau_es_dm_DeepTau2018v2p5_{year}_{postfix}.json.gz", "v1"), # Tau ID SF (NEW FROM IC)
-        "tau_trig_sf"       : (f"{corrdir}/TAU/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/tau_trigger_DeepTau2018v2p5_{year}_{postfix}.json.gz", "v1"), # Tau ID SF (NEW FROM IC)
-        # -- https://gitlab.cern.ch/cclubbtautau/AnalysisCore/-/blob/main/data/TriggerScaleFactors/2022preEE/ditaujet_jetleg_SFs_preEE.json?ref_type=heads
-        "ditau_jet_trig_sf" : (f"{corrdir}/TAU/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12/ditaujet_jetleg_SFs_{postfix}.json",   "v1"),
+        "gen_tau_sf"        : (f"{corrdir}/TAU/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12_Extra/tau_sf_pt-dm_DeepTau2018v2p5VSjet_{year}_{postfix}.json.gz", "v1"), # Tau ID SF (NEW FROM IC)
+        "tes_sf"            : (f"{corrdir}/TAU/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12_Extra/tau_es_dm_DeepTau2018v2p5_{year}_{postfix}.json.gz", "v1"), # Tau ID SF (NEW FROM IC)
+        "tau_trig_sf"       : (f"{corrdir}/TAU/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12_Extra/tau_trigger_DeepTau2018v2p5_{year}_{postfix}.json.gz", "v1"), # Tau ID SF (NEW FROM IC)
+        # .. https://gitlab.cern.ch/cclubbtautau/AnalysisCore/-/blob/main/data/TriggerScaleFactors/2022preEE/ditaujet_jetleg_SFs_preEE.json?ref_type=heads
+        "ditau_jet_trig_sf" : (f"{corrdir}/TAU/Run{run}_{year}{year_postfix}_Summer{year2}_NanoAODv12_Extra/ditaujet_jetleg_SFs_{postfix}.json",   "v1"),
         # https://gitlab.cern.ch/dwinterb/HiggsDNA/-/tree/master/higgs_dna/systematics/ditau/ROOT/Zpt?ref_type=heads
         "zpt_rewt_v1_sf"    : (f"{corrdir}/{year}{postfix}/Zpt/myZptCorrections.json.gz",   "v1"), # Zpt Rewt
         # https://indico.cern.ch/event/1360909/contributions/6000616/attachments/2875911/5036473/HLepRare_24.06.12.pdf
@@ -951,13 +961,13 @@ def add_config (ana: od.Analysis,
                 "emu"    : "Tight", # need to check
                 "etau"   : "Tight",
                 "mutau"  : "Tight",
-                "tautau" : "Tight", #"VLoose",
+                "tautau" : "Tight", #"VLoose",  #"Tight", #"VLoose",
             },
             "vs_j": {
                 "emu"    : "VTight", # need to check
                 "etau"   : "VTight",
                 "mutau"  : "VTight", ##"Medium" : OLD,
-                "tautau" : "VTight", ## VTight : Proposed by Imperial, was Medium in Run2
+                "tautau" : "VTight", #"VLoose", #"Medium", #"VTight", ## VTight : Proposed by Imperial, was Medium in Run2
                 # W A R N I N G !!! Medium is being used for ML, Change it to VTight for CP analysis
                 #"tautau" : "Medium",
             },
@@ -1405,7 +1415,7 @@ def add_config (ana: od.Analysis,
     cfg.x.event_tautau_weights = DotDict({
         "normalization_weight"                  : [],
         "pu_weight"                             : get_shifts("minbias_xs"),
-        "tau_weight"                            : get_shifts("tau"),
+        #"tau_weight"                            : get_shifts("tau"),
         #"tau_trigger_weight"                    : get_shifts("tau_trig"),
         #"ff_weight"                             : [],
         ##"ff_cls_corr_weight"                    : [],
@@ -1413,7 +1423,7 @@ def add_config (ana: od.Analysis,
         ##"tauspinner_weight"                     : get_shifts("tauspinner"),
         ##"pdf_weight"                            : [],
         "zpt_reweight"                          : get_shifts("zpt"),
-        "top_pt_weight"                         : [],
+        #"top_pt_weight"                         : [],
     })
 
     #---------------------------------------------------------------------------------------------#
@@ -1449,34 +1459,70 @@ def add_config (ana: od.Analysis,
     # the main path is in the campaign __init__, the basepath is mentioned in the dataset info
     #---------------------------------------------------------------------------------------------#
 
+    #redirector_name = "wlcg_fs_eoscms_redirector"
+    #redirector_name = "wlcg_fs_imperial_redirector"
+    #redirector_name = "wlcg_fs_global_redirector"
+    redirector_name = "wlcg_fs_iphc_redirector"
+    
     campaign_tag = cfg.campaign.x("custom").get("creator")
-    if campaign_tag == "desy" or campaign_tag == "IPHC":
-        def get_dataset_lfns(dataset_inst: od.Dataset, shift_inst: od.Shift, dataset_key: str) -> list[str]:
+    if campaign_tag == "IPHC":
+        def get_dataset_lfns(dataset_inst: od.Dataset,
+                             shift_inst: od.Shift,
+                             dataset_key: str) -> list[str]:
+
             # destructure dataset_key into parts and create the lfn base directory
-            logger.info(f"Creating custom get_dataset_lfns for {config_name}")   
-            try:
-               basepath = cfg.campaign.x("custom").get("location")
-            except:
-                logger.warning("Did not find any basebath in the campaigns")
-                basepath = "" 
-            lfn_base = law.wlcg.WLCGDirectoryTarget(
-                f"{basepath}{dataset_key}",
-                #fs="wlcg_fs_eoscms_redirector",
-                fs="wlcg_fs_imperial_redirector",
-            )
-            logger.info(f"lfn basedir:{lfn_base}")
+            logger.info(f"Creating custom get_dataset_lfns for {config_name}")
+
+            store_path = CMSDatasetInfo.from_key(dataset_key).store_path.lstrip("/")
+            
+            #dataset_id, full_campaign, tier = dataset_key.split("/")[1:]
+            #main_campaign, sub_campaign = full_campaign.split("-", 1)
+            #path = f"store/{dataset_inst.data_source}/{main_campaign}/{dataset_id}/{tier}/{sub_campaign}"
+            
+            logger.info(f'path : {store_path}')
+            
+            #basepath = cfg.campaign.x("custom").get("location")
+            #if basepath is None:
+            #    basepath = ""
+            #try:
+            #   basepath = cfg.campaign.x("custom").get("location")
+            #except:
+            #    logger.warning("Did not find any basebath in the campaigns")
+            #    basepath = "" 
+            #lfn_base = law.wlcg.WLCGDirectoryTarget(
+            #    f"{basepath}{dataset_key}",
+            #    fs=f"{redirector_name}",
+            #)
+
+            #lfn_base = law.wlcg.WLCGDirectoryTarget(
+            
+            dir_cls = law.wlcg.WLCGDirectoryTarget
+            lfn_base = dir_cls(store_path, fs=redirector_name)
+            lfn_num_bases = [lfn_base.child(d, type="d") for d in lfn_base.listdir() if d.isnumeric()]
+            
+            #logger.info(f"lfn basedir:{lfn_base}")
             # loop though files and interpret paths as lfns
-            return [
-                lfn_base.child(basename, type="f").path
-                for basename in lfn_base.listdir(pattern="*.root")
-            ]
+            #return [
+            #    lfn_base.child(basename, type="f").path
+            #    for basename in lfn_base.listdir(pattern="*.root")
+            #]
+            # loop though files and interpret paths as lfns
+            lfns = sum((
+                [
+                    "/" + lfn_num_base.child(basename, type="f").path.lstrip("/")
+                    for basename in lfn_num_base.listdir(pattern="*.root")
+                ]
+                for lfn_num_base in lfn_num_bases
+            ), [])
+
+            return sorted(lfns)
+            
         # define the lfn retrieval function
         cfg.x.get_dataset_lfns = get_dataset_lfns
         # define a custom sandbox
         cfg.x.get_dataset_lfns_sandbox = dev_sandbox("bash::$CF_BASE/sandboxes/cf.sh")
         # define custom remote fs's to look at
-        #cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: "wlcg_fs_eoscms_redirector"
-        cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: "wlcg_fs_imperial_redirector"
+        cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: redirector_name
         
     #---------------------------------------------------------------------------------------------#
     # Add categories described in categorization.py
@@ -1525,6 +1571,7 @@ def add_config (ana: od.Analysis,
     
     cfg.x.keep_columns = DotDict.wrap({
         "cf.ReduceEvents": {
+            "LHEPart.*",
             # TauProds
             "TauProd.*",
             "GenTop_pt",
@@ -1782,7 +1829,7 @@ def add_config (ana: od.Analysis,
 
 
     cfg.x.extra_tags = DotDict.wrap({
-        "genmatch"       : True,
+        "genmatch"       : False,
     })
 
 

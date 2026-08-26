@@ -16,7 +16,7 @@ ak = maybe_import("awkward")
 
 
 @producer(
-    uses={"Muon.{pt,eta}"},
+    uses={"Muon.{pt,eta,phi,mass}"},
     # produces in the init
     # only run on mc
     mc_only=True,

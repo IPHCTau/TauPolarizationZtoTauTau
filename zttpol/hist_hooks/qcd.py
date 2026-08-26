@@ -1,0 +1,355 @@
+# coding: utf-8
+
+"""
+Histogram hooks for QCD estimation.
+"""
+
+from __future__ import annotations
+
+import collections
+import functools
+
+import law
+import order as od
+import scinum as sn
+
+from columnflow.util import maybe_import, DotDict
+from columnflow.types import TYPE_CHECKING, Any, Literal
+
+if TYPE_CHECKING:
+    hist = maybe_import("hist")
+
+
+logger = law.logger.get_logger(__name__)
+
+
+# helper to convert a histogram to a number object containing bin values and uncertainties
+# from variances stored in an array of values
+def hist_to_num(h: hist.Histogram, unc_name=str(sn.DEFAULT)) -> sn.Number:
+    return sn.Number(h.values(), {unc_name: h.variances()**0.5})
+
+
+# helper to integrate values stored in an array based number object
+def integrate_num(num: sn.Number, axis=None) -> sn.Number:
+    return sn.Number(
+        nominal=num.nominal.sum(axis=axis),
+        uncertainties={
+            unc_name: (
+                (unc_values_up**2).sum(axis=axis)**0.5,
+                (unc_values_down**2).sum(axis=axis)**0.5,
+            )
+            for unc_name, (unc_values_up, unc_values_down) in num.uncertainties.items()
+        },
+    )
+
+
+# helper to ensure that a specific category exists on the "category" axis of a histogram
+def ensure_category(h: hist.Histogram, category_name: str) -> hist.Histogram:
+    cat_axis = h.axes["category"]
+    if category_name in cat_axis:
+        return h
+    dummy_fill = {ax.name: ax[0] for ax in h.axes if ax.name != "category"}
+    h.fill(**dummy_fill, category=category_name, weight=0.0)
+    return h
+
+
+def add_hooks(analysis_inst: od.Analysis) -> None:
+    """
+    Add histogram hooks to a analysis.
+    """
+    def qcd_estimation_per_config(
+        task: law.Task,
+        config_inst: od.Config,
+        hists: dict[od.Process, Any],
+        requested_category: str | None = None,
+        empty_bin_value: float = 0.0,
+        # which source(s) of variance to keep
+        variance_strategy: Literal["mc_data", "mc", "data", "none"] = "mc_data",
+        # fill *empty_bin_value* (zero) into values (variances) in case one of the two integrals for the transfer factor
+        # calculation is negative
+        fill_empty_negative_norms: bool = True,
+        # residual filling of *empty_bin_value* (zero) into values (variances) where the bin content is <= 0
+        fill_empty_residual: bool = True,
+        # whether to do sum leaf categories first for all data and mc histograms and then performing the ABCD method,
+        # opposed to doing the ABCD method per leaf category and then summing up the resulting qcd histograms
+        sum_leaves_first: bool = True,
+        # strategy for shape transfer
+        shape_transfer: Literal["from_os_noniso", "from_ss_iso"] = "from_os_noniso",
+        **kwargs,
+    ) -> dict[od.Process, Any]:
+        import numpy as np
+        import hist
+
+        if variance_strategy not in (known_variance_strategies := {"mc_data", "mc", "data", "none"}):
+            raise ValueError(
+                f"unknown variance strategy '{variance_strategy}', known strategies are: "
+                f"{', '.join(known_variance_strategies)}",
+            )
+
+        if shape_transfer not in (known_shape_transfers := {"from_os_noniso", "from_ss_iso"}):
+            raise ValueError(
+                f"unknown shape transfer strategy '{shape_transfer}', known strategies are: "
+                f"{', '.join(known_shape_transfers)}",
+            )
+
+        # get the qcd process
+        qcd_proc = config_inst.get_process("qcd", default=None)
+        if not qcd_proc:
+            return hists
+
+        # extract all unique category names and verify that the axis order is exactly
+        # "category -> shift -> variable" which is needed to insert values at the end
+        CAT_AXIS, SHIFT_AXIS, VAR_AXIS = range(3)
+        category_names = set()
+        for proc, h in hists.items():
+            # validate axes
+            assert len(h.axes) == 3
+            assert h.axes[CAT_AXIS].name == "category"
+            assert h.axes[SHIFT_AXIS].name == "shift"
+            # get the category axis
+            cat_ax = h.axes["category"]
+            category_names.update(list(cat_ax))
+
+        # get ABCD categories corresponding to the requested category
+        requested_group = None
+        # determine the group corresponding to the requested category
+        # (disable this check if the qcd estimation should be done on granular leaf categories again)
+        if sum_leaves_first and requested_category:
+            def find_cat(cat_name, cat_tags, check_group=None):
+                cat_inst = config_inst.get_category(cat_name)
+                if not cat_inst.has_tag(cat_tags, mode=all):
+                    raise ValueError(
+                        f"requested category {cat_name} does not have the required tags {cat_tags} for the "
+                        f"ABCD method.",
+                    )
+                if check_group and cat_inst.x.qcd_group != check_group:
+                    raise ValueError(
+                        f"requested category {cat_name} is not part of the same ABCD group {check_group} as the "
+                        f"other categories.",
+                    )
+                return cat_inst
+
+            cat_inst_req = DotDict()
+            cat_inst_req.os_iso = find_cat(requested_category, {"os", "iso"})
+            requested_group = cat_inst_req.os_iso.x.qcd_group
+            cat_inst_req.ss_iso = find_cat(requested_category.replace("os__iso", "ss__iso"), {"ss", "iso"}, requested_group)  # noqa: E501
+            cat_inst_req.os_noniso = find_cat(requested_category.replace("os__iso", "os__noniso"), {"os", "noniso"}, requested_group)  # noqa: E501
+            cat_inst_req.ss_noniso = find_cat(requested_category.replace("os__iso", "ss__noniso"), {"ss", "noniso"}, requested_group)  # noqa: E501
+
+        # create qcd groups
+        qcd_groups: dict[str, dict[str, list[od.Category]]] = collections.defaultdict(DotDict)
+        for cat_name in category_names:
+            cat_inst = config_inst.get_category(cat_name)
+            # store references to the four category objects
+            region_key = None
+            if cat_inst.has_tag({"os", "iso"}, mode=all):
+                region_key = "os_iso"
+            elif cat_inst.has_tag({"os", "noniso"}, mode=all):
+                region_key = "os_noniso"
+            elif cat_inst.has_tag({"ss", "iso"}, mode=all):
+                region_key = "ss_iso"
+            elif cat_inst.has_tag({"ss", "noniso"}, mode=all):
+                region_key = "ss_noniso"
+            else:
+                continue
+
+            qcd_groups[cat_inst.x.qcd_group].setdefault(region_key, []).append(cat_inst)
+
+            # store the group corresponding to the requested category (if set)
+            if requested_group:
+                if any(c.has_category(cat_name, deep=True) for c in cat_inst_req.values()):
+                    qcd_groups[requested_group].setdefault(region_key, []).append(cat_inst)
+
+        # get complete qcd groups, potentially only selecting the one corresponding to the requested category
+        if requested_group:
+            complete_groups = [requested_group] if len(qcd_groups[requested_group]) == 4 else []
+        else:
+            complete_groups = [
+                name for name, cats in qcd_groups.items()
+                if len(cats) == 4
+            ]
+
+        # nothing to do if there are no complete groups
+        if not complete_groups:
+            task.logger.warning("no complete ABCD groups found, skipping QCD estimation")
+            return hists
+
+        # sum up mc and data histograms, stop early when empty
+        mc_hists = [h for p, h in hists.items() if p.is_mc and not p.has_tag("signal")]
+        if not mc_hists:
+            task.logger.warning("no MC histograms found, skipping QCD estimation")
+            return hists
+        data_hists = [h for p, h in hists.items() if p.is_data]
+        if not data_hists:
+            task.logger.warning("no data histograms found, skipping QCD estimation")
+            return hists
+        mc_hist = sum(mc_hists[1:], mc_hists[0].copy())
+        data_hist = sum(data_hists[1:], data_hists[0].copy())
+
+        # start by copying the mc hist and reset it, then fill it at specific category slices
+        hists[qcd_proc] = qcd_hist = mc_hist.copy().reset()
+        for group_name in complete_groups:
+            group = qcd_groups[group_name]
+
+            if not requested_group:
+                for key, cats in group.items():
+                    if len(cats) > 1:
+                        raise ValueError(f"ABCD group {group_name} has multiple categories for region {key}")
+
+            # get the corresponding histograms and convert them to number objects, each one storing an array of values
+            # with uncertainties
+            # shapes: (SHIFT, VAR)
+            def get_hist(h: hist.Histogram, region_name: str) -> hist.Histogram:
+                # define intermediate categories to sum over if necessary
+                for cat in group[region_name]:
+                    h = ensure_category(h, cat.name)
+                h = h[{"category": [hist.loc(cat.name) for cat in group[region_name]]}]
+                return h[{"category": sum}]
+
+            os_noniso_mc = hist_to_num(get_hist(mc_hist, "os_noniso"), "os_noniso_mc")
+            ss_noniso_mc = hist_to_num(get_hist(mc_hist, "ss_noniso"), "ss_noniso_mc")
+            ss_iso_mc = hist_to_num(get_hist(mc_hist, "ss_iso"), "ss_iso_mc")
+            os_noniso_data = hist_to_num(get_hist(data_hist, "os_noniso"), "os_noniso_data")
+            ss_noniso_data = hist_to_num(get_hist(data_hist, "ss_noniso"), "ss_noniso_data")
+            ss_iso_data = hist_to_num(get_hist(data_hist, "ss_iso"), "ss_iso_data")
+
+            # data will always have a single shift whereas mc might have multiple,
+            # broadcast numbers in-place manually if necessary
+            if (n_shifts := mc_hist.axes["shift"].size) > 1:
+                def broadcast_data_num(num: sn.Number) -> None:
+                    num._nominal = np.repeat(num.nominal, n_shifts, axis=0)
+                    for name, (unc_up, unc_down) in num._uncertainties.items():
+                        num._uncertainties[name] = (
+                            np.repeat(unc_up, n_shifts, axis=0),
+                            np.repeat(unc_down, n_shifts, axis=0),
+                        )
+                broadcast_data_num(os_noniso_data)
+                broadcast_data_num(ss_noniso_data)
+                broadcast_data_num(ss_iso_data)
+
+            # helper to warn about negative bins
+            def warn_negative_bins(neg_mask: np.ndarray, region_name: str) -> None:
+                if neg_mask.any():
+                    shift_ids = [sid for neg, sid in zip(neg_mask, mc_hist.axes["shift"]) if neg]
+                    shifts = list(map(config_inst.get_shift, shift_ids))
+                    logger.warning(
+                        f"negative QCD integral in {region_name} region for group {group_name} and shifts: "
+                        f"{', '.join(shift.name for shift in shifts)}",
+                    )
+
+            # re-assign histograms to BCD regions depending on shape transfer strategy
+            # (B: shape transfer, C/D: transfer factor)
+            if shape_transfer == "from_os_noniso":
+                b_data, b_mc = os_noniso_data, os_noniso_mc
+                c_data, c_mc = ss_iso_data, ss_iso_mc
+                d_data, d_mc = ss_noniso_data, ss_noniso_mc
+                c_region_name, d_region_name = "ss_iso", "ss_noniso"
+            else:  # from_ss_iso
+                b_data, b_mc = ss_iso_data, ss_iso_mc
+                c_data, c_mc = os_noniso_data, os_noniso_mc
+                d_data, d_mc = ss_noniso_data, ss_noniso_mc
+                c_region_name, d_region_name = "os_noniso", "ss_noniso"
+
+            # get the qcd shape from B
+            # shapes: (SHIFT, VAR)
+            qcd: sn.Number = b_data - b_mc
+
+            # get integrals to compute the transfer factor
+            # shapes: (SHIFT,)
+            c_int: sn.Number = integrate_num(c_data, axis=1) - integrate_num(c_mc, axis=1)
+            d_int: sn.Number = integrate_num(d_data, axis=1) - integrate_num(d_mc, axis=1)
+
+            # check negative integrals in shift bins
+            c_neg_mask = c_int() <= 0
+            warn_negative_bins(c_neg_mask, c_region_name)
+            d_neg_mask = d_int() <= 0
+            warn_negative_bins(d_neg_mask, d_region_name)
+
+            # ABCD method
+            # shape: (SHIFT, VAR)
+            qcd = qcd * ((c_int / d_int)[:, None])
+
+            # combine uncertainties and store values in bare arrays
+            qcd_values = qcd()
+            qcd_variances = qcd(sn.UP, sn.ALL, unc=True)**2
+
+            # control variance values based on the requested strategy
+            unc_mc = qcd(sn.UP, ["os_noniso_mc", "ss_iso_mc", "ss_noniso_mc"], unc=True)
+            unc_data = qcd(sn.UP, ["os_noniso_data", "ss_iso_data", "ss_noniso_data"], unc=True)
+
+            def finite(arr, val=0.0):
+                arr = arr.copy()
+                arr[~np.isfinite(arr)] = val
+                return arr
+
+            if variance_strategy == "mc":
+                qcd_variances[...] = finite(unc_mc)**2
+            elif variance_strategy == "data":
+                qcd_variances[...] = finite(unc_data)**2
+            elif variance_strategy == "none":
+                qcd_variances[...] = 0.0
+            else:  # mc_data
+                # nothing to do
+                qcd_variances[...] = finite(qcd_variances)
+
+            # retro-actively set values to zero for shifts that had negative integrals
+            neg_int_mask = c_neg_mask | d_neg_mask
+            if fill_empty_negative_norms:
+                qcd_values[neg_int_mask, :] = empty_bin_value
+                qcd_variances[neg_int_mask, :] = 0.0
+
+            # residual zero filling
+            if fill_empty_residual:
+                zero_mask = qcd_values <= 0
+                # when keeping negative norms, do exclude them from the usual zero filling
+                if not fill_empty_negative_norms:
+                    zero_mask &= ~neg_int_mask
+                qcd_values[zero_mask] = empty_bin_value
+                qcd_variances[zero_mask] = 0.0
+
+            # ensure that the requested category exists in the qcd histogram (if set)
+            if requested_group:
+                qcd_hist = ensure_category(qcd_hist, requested_category)
+
+            # insert values into the qcd histogram
+            cat_axis = qcd_hist.axes["category"]
+            for cat_index in range(cat_axis.size):
+                if cat_axis.value(cat_index) == group.os_iso[0].name:
+                    qcd_hist.view().value[cat_index, ...] = qcd_values
+                    qcd_hist.view().variance[cat_index, ...] = qcd_variances
+                    break
+            else:
+                raise RuntimeError(
+                    f"could not find index of bin on 'category' axis of qcd histogram {qcd_hist} for category "
+                    f"{group.os_iso}",
+                )
+
+        return hists
+
+    def qcd_estimation(
+        task: law.Task,
+        hists: dict[od.Config, dict[od.Process, Any]],
+        category_name: str,
+        variable_name: str,
+        **kwargs,
+    ) -> dict[od.Config, dict[od.Process, Any]]:
+        return {
+            config_inst: qcd_estimation_per_config(
+                task,
+                config_inst,
+                hists[config_inst],
+                requested_category=category_name,
+                **kwargs,
+            )
+            for config_inst in hists.keys()
+        }
+
+    # add different hook variations
+    analysis_inst.x.hist_hooks.qcd = qcd_estimation
+    analysis_inst.x.hist_hooks.qcd_zerofill = functools.partial(qcd_estimation, empty_bin_value=1e-5)
+    analysis_inst.x.hist_hooks.qcd_from_ss_iso = functools.partial(qcd_estimation, shape_transfer="from_ss_iso")
+    analysis_inst.x.hist_hooks.qcd_raw = functools.partial(
+        qcd_estimation,
+        fill_empty_negative_norms=False,
+        fill_empty_residual=False,
+    )

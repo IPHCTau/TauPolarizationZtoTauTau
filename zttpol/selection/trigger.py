@@ -18,7 +18,7 @@ coffea = maybe_import("coffea")
 @selector(
     uses={
         "run",
-        "TrigObj.id", "TrigObj.pt", "TrigObj.eta", "TrigObj.phi", "TrigObj.filterBits",
+        "TrigObj.{id,pt,eta,phi,filterBits}",
     },
     exposed=True,
 )
@@ -31,9 +31,10 @@ def trigger_selection(
     HLT trigger path selection.
     """
 
-    channel = kwargs.get('channel')
-    assert channel in {'emu','etau','mutau','tautau'}, f"Invalid channel mentioned in trigger selection: {channel}"
-        
+    channel = self.config_inst.x.channel
+    #channel = kwargs.get('channel')
+    assert channel in {'ee','mumu','emu','etau','mutau','tautau'}, f"Invalid channel mentioned in trigger selection: {channel}"
+
     any_fired = False
     any_fired_all_legs_match = False
 
@@ -82,6 +83,7 @@ def trigger_selection(
 
         trigger_type_array, _ = ak.broadcast_arrays(trigger_type_temp, events.event)
         trigger_types.append(trigger_type_array[:,None])
+
         
         # get bare decisions
         fired = events.HLT[trigger.hlt_field] == 1
@@ -96,8 +98,12 @@ def trigger_selection(
                 else: 
                     fired = fired & (events.run >= trigger.run_range[0]) & (events.run <= trigger.run_range[1])
 
+                
         any_fired = any_fired | fired
-
+        # ----------------------------- B E   C A R E F U L ------------------------------- #
+        #from IPython import embed; embed()
+        #any_fired = ak.where(any_fired, any_fired, ~any_fired) # make all True, just to remove trigger
+        
         
         # get trigger objects for fired events per leg
         leg_matched_trigobj_idxs         = []
@@ -281,21 +287,22 @@ def trigger_selection(
         "leg3_matched_trigobjs" : leg3_matched_trigobjs_filtered, # NEW
     }
 
-    #from IPython import embed; embed()
-    
     return events, SelectionResult(
         steps={
-            "trigger": any_fired,
+            "triggered": any_fired,
         },
         aux=trigger_data,
     )
 
 
+
 @trigger_selection.init
-def trigger_selection_init(self: Selector) -> None:
+def trigger_selection_init(self: Selector, **kwargs) -> None:
+    super(trigger_selection, self).init_func(**kwargs)
+
     if getattr(self, "dataset_inst", None) is None:
         return
-
+    
     # full used columns
     self.uses |= {
         opt(trigger.name)

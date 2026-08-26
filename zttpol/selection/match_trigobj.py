@@ -8,6 +8,142 @@ np = maybe_import("numpy")
 ak = maybe_import("awkward")
 
 
+# ----------------------------------------------------- #
+# dilep, semilep, fullhad means final state only        #
+# dilep : only one leg will be matched (single trigger) #
+# semilep,fullhad : both legs                           #
+# ----------------------------------------------------- #
+
+def match_trigobjs_dilep(
+        leps_pair: ak.Array,
+        trigger_results: SelectionResult,
+        **kwargs,
+) -> tuple[ak.Array, ak.Array]:
+
+    ch = kwargs.get("channel_1") # e,mu
+    
+    # extract the trigger names, types & others from trigger_results.x (aux)
+    trigger_ids           = trigger_results.x.trigger_ids
+    trigger_types         = trigger_results.x.trigger_types
+    leg1_minpt            = trigger_results.x.leg1_minpt
+    leg1_maxeta           = trigger_results.x.leg1_maxeta
+    leg1_matched_trigobjs = trigger_results.x.leg1_matched_trigobjs
+
+    has_triggers = trigger_types == f"single_{ch}"
+
+    leps_pair  = filter_by_triggers(leps_pair, has_triggers)
+    lep1, lep2 = ak.unzip(leps_pair)
+
+    
+    # Event level masks
+    has_pairs = ak.fill_none(ak.num(lep1, axis=1) > 0, False)
+    mask_has_triggers_and_has_lep_pairs = has_triggers & has_pairs
+
+
+    # filtering out the info based on the masks defined just above
+    # for etau and mutau type of events, separate masks are created
+    # for single and cross triggered events
+    # for single e triggers
+    trigger_types          = trigger_types[mask_has_triggers_and_has_lep_pairs]
+    trigger_ids            = trigger_ids[mask_has_triggers_and_has_lep_pairs]
+    leg_1_minpt            = leg1_minpt[mask_has_triggers_and_has_lep_pairs]
+    leg_1_maxeta           = leg1_maxeta[mask_has_triggers_and_has_lep_pairs] 
+    leg_1_matched_trigobjs = leg1_matched_trigobjs[mask_has_triggers_and_has_lep_pairs]
+
+
+    # to convert the masks to event level
+    # e.g. events with etau pair and pass electron triggers
+    mask_has_triggers_and_has_lep_pairs_evt_level = ak.any(mask_has_triggers_and_has_lep_pairs, axis=1)
+    
+    # dummy bool array
+    trigobj_matched_mask_dummy = ak.from_regular((trigger_ids > 0)[:,:0][:,None])
+
+    trigobj_matched_mask_11 = trigger_object_matching_deep(lep1,
+                                                           leg_1_matched_trigobjs,
+                                                           leg_1_minpt,
+                                                           leg_1_maxeta,
+                                                           True)
+
+    trigobj_matched_mask_12 = trigger_object_matching_deep(lep2,
+                                                           leg_1_matched_trigobjs,
+                                                           leg_1_minpt,
+                                                           leg_1_maxeta,
+                                                           True)
+
+    lep_1_matched = ak.any(trigobj_matched_mask_11, axis=-1)
+    lep_2_matched = ak.any(trigobj_matched_mask_12, axis=-1)
+
+    any_lep_matched = (lep_1_matched | lep_2_matched)
+
+    new_lep1 = lep1[any_lep_matched]
+    new_lep2 = lep2[any_lep_matched]
+
+    lep_1_matched = lep_1_matched[any_lep_matched]
+    lep_2_matched = lep_2_matched[any_lep_matched]
+    
+    #from IPython import embed; embed()
+
+    
+    # keep trigger matched one in 1st position
+    # if both matched, keep the old format
+    new_sorted_lep1 = ak.where(lep_1_matched,
+                               new_lep1,
+                               ak.where((lep_2_matched) & (~lep_1_matched),
+                                        new_lep2,
+                                        new_lep1))
+    new_sorted_lep2 = ak.where(lep_1_matched,
+                               new_lep2,
+                               ak.where((lep_2_matched) & (~lep_1_matched),
+                                        new_lep1,
+                                        new_lep2))
+
+
+    trigobj_matched_mask = (trigobj_matched_mask_11 | trigobj_matched_mask_12)
+    
+    
+    trigobj_matched_mask_dummy = ak.from_regular((trigger_ids > 0)[:,:0][:,None])
+    
+    pass_lep_leg = ak.where(mask_has_triggers_and_has_lep_pairs_evt_level, trigobj_matched_mask, trigobj_matched_mask_dummy)
+    pass_lep_leg = ak.enforce_type(ak.values_astype(pass_lep_leg, "bool"), "var * var * bool") # 100000 * var * var * bool
+    
+    
+    pass_lep = ak.fill_none(ak.any(pass_lep_leg, axis=-1), False)
+
+
+    trigger_ids_brdcst, _ = ak.broadcast_arrays(trigger_ids[:,None], pass_lep)
+    trigger_ids_brdcst    = trigger_ids_brdcst[pass_lep]
+
+    trigger_ids_brdcst_dummy = ak.from_regular(trigger_ids_brdcst[:,:0][:,None])
+    trigger_ids_brdcst       = ak.where(ak.num(trigger_ids_brdcst) > 0, trigger_ids_brdcst, trigger_ids_brdcst_dummy)
+    
+    ids = ak.Array(ak.to_list(ak.firsts(trigger_ids_brdcst, axis=1))) # BAD Practice !!!
+    
+    ids = ids[ak.fill_none(ak.firsts(pass_lep_leg, axis=1), False)]
+    ids = ak.values_astype(ids, 'int64')
+
+    #new_lep1 = lep1[pass_lep]
+    #new_lep2 = lep2[pass_lep]
+    
+    #leps_pair = ak.zip([new_lep1, new_lep2])
+
+    trigger_types_brdcst, _ = ak.broadcast_arrays(trigger_types[:,None], pass_lep)    
+    trigger_types_brdcst    = trigger_types_brdcst[pass_lep]
+
+    trigger_types_brdcst_dummy = ak.from_regular(trigger_types_brdcst[:,:0][:,None])
+    trigger_types_brdcst = ak.where(ak.num(trigger_types_brdcst) > 0, trigger_types_brdcst, trigger_types_brdcst_dummy)
+        
+    types = ak.Array(ak.to_list(ak.firsts(trigger_types_brdcst, axis=1))) # BAD Practice !!!
+    types = types[ak.fill_none(ak.firsts(pass_lep_leg, axis=1), False)]
+
+
+    leps_pair = ak.zip([new_sorted_lep1, new_sorted_lep2])    
+    
+    #from IPython import embed; embed()
+
+    return leps_pair, ids, types
+
+
+
 
 def match_trigobjs_semilep(
         leps_pair: ak.Array,
@@ -384,7 +520,6 @@ def match_trigobjs_fullhad(
 
     #ids_ditau = 
 
-    #from IPython import embed; embed()
 
 
     

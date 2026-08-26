@@ -14,7 +14,13 @@ from zttpol.production.PhiCP_Estimator import GetPhiCP
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column, optional_column as optional
 
 from zttpol.production.helper import getlistofobservables, wrap, clean_rearranged_dict, unwrap
-from zttpol.production.ComputeObservables import get_observables_mutau, get_observables_tautau
+from zttpol.production.ComputeObservables import (
+    get_observables_etau,
+    get_observables_mutau,
+    get_observables_tautau
+)
+
+from zttpol.production.applyFastMTT import apply_fastMTT
 
 
 import law
@@ -29,12 +35,12 @@ logger = law.logger.get_logger(__name__)
     uses={
         "channel_id",
         "zcand.{pt,eta,phi,mass,decayMode,charge,IPx,IPy,IPz}",
-        optional("zcand.pt_fastMTT"), optional("zcand.eta_fastMTT"), optional("zcand.phi_fastMTT"), optional("zcand.mass_fastMTT"),
         "zcandprod.{pt,eta,phi,mass,pdgId}",
         optional("GenTau.pt"), optional("GenTau.eta"), optional("GenTau.phi"), optional("GenTau.mass"),
         optional("GenTau.IPx"), optional("GenTau.IPy"), optional("GenTau.IPz"),
         optional("GenTau.decayMode"), optional("GenTau.charge"), 
         optional("GenTauProd.pt"), optional("GenTauProd.eta"), optional("GenTauProd.phi"), optional("GenTauProd.mass"),
+        apply_fastMTT,
     },
 )
 def ProduceObservables(
@@ -44,20 +50,30 @@ def ProduceObservables(
         **kwargs,
 ) -> tuple[ak.Array,ak.Array,ak.Array,ak.Array,ak.Array]:
 
-    channel = self.config_inst.x.channel
+    run_reg_algo = kwargs.get('run_reg_algo', False)
     
+    channel = self.config_inst.x.channel
     PrepareP4 = lambda p4dict, mask : {key: ak.where(mask, val, val[:,:0]) for key, val in p4dict.items()}
 
-    def extract_observables(observables, p4zcand, mask, leg1, leg2, observable_func, keylist=['p4z1']):
+    def extract_observables(observables, p4zcand, mask, leg1, leg2, observable_func, keylist=['p4z1'], **kwargs):
+
+        reg_algo = kwargs.get("reg_algo", None)
+        
         zcandP4 = PrepareP4(p4zcand, mask)
         zcandP4, count = clean_rearranged_dict(zcandP4, keylist=keylist)
+
+        if run_reg_algo:
+            if reg_algo == 'fastMTT':
+                logger.info('Run FastMTT')
+                p4zcand_1_fmtt, p4zcand_2_fmtt = self[apply_fastMTT](events[mask])
+                zcandP4['p4z1'] = p4zcand_1_fmtt
+                zcandP4['p4z2'] = p4zcand_2_fmtt
+
         observable_dict = observable_func(zcandP4, leg1, leg2) # get_observables_mutau
         observable_dict = unwrap(observable_dict, count, debug=False)
         observables = wrap(mask, observable_dict, observables)
 
         return observables
-
-
 
     
     is_e      = lambda leg: ak.fill_none(ak.firsts(leg.decayMode == -1, axis=1), False)
@@ -69,8 +85,8 @@ def ProduceObservables(
     is_a1DM11 = lambda leg: ak.fill_none(ak.firsts(leg.decayMode == 11, axis=1), False)
     is_a1     = is_a1DM10 # for now
 
-    p4h1      = p4zcandinfo["p4z1"]
-    p4h2      = p4zcandinfo["p4z2"]
+    p4z1      = p4zcandinfo["p4z1"]
+    p4z2      = p4zcandinfo["p4z2"]
 
 
     dummyPhiCP = ak.from_regular(ak.values_astype(events.event[:,None][:,:0], np.float32))
@@ -94,23 +110,28 @@ def ProduceObservables(
     #                                e-tau                                 #
     # -------------------------------------------------------------------- #
     elif channel == "etau":
+
+        observables = copy.deepcopy(dummy_observables)
         
         # etau
         mask_e_pi      = is_pi(p4z2)
         mask_e_rho     = (is_rho(p4z2) | is_a1DM2(p4z2))
-        mask_e_a1      = (is_a1DM10(p4z2) | is_a1DM11(p4h2))
+        mask_e_a1      = (is_a1DM10(p4z2) | is_a1DM11(p4z2))
 
         # e-pi
         logger.info('e-pi')
-        observables = extract_observables(observables, p4zcandinfo, mask_e_pi, 'e', 'pi', get_observables_etau, keylist=['p4z2'])
+        observables = extract_observables(observables, p4zcandinfo, mask_e_pi, 'e', 'pi', get_observables_etau, keylist=['p4z2'],
+                                          reg_algo='fastMTT')
         
         # e-rho
         logger.info('e-rho')
         observables = extract_observables(observables, p4zcandinfo, mask_e_rho, 'e', 'rho', get_observables_etau, keylist=['p4z2'])
 
+
         # e-a1
         logger.info('e-a1')
-        observables = extract_observables(observables, p4zcandinfo, mask_e_a1, 'e', 'a1', get_observables_etau, keylist=['p4z2','p4z2pi'])
+        observables = extract_observables(observables, p4zcandinfo, mask_e_a1, 'e', 'a1', get_observables_etau, keylist=['p4z2'],
+                                          reg_algo='fastMTT')
 
         
 
@@ -121,24 +142,33 @@ def ProduceObservables(
 
         observables = copy.deepcopy(dummy_observables)
         
-        mask_mu_pi     = is_pi(p4h2)
-        mask_mu_rho    = (is_rho(p4h2)  | is_a1DM2(p4h2))
-        mask_mu_a1     = (is_a1DM10(p4h2) | is_a1DM11(p4h2))
+        mask_mu_pi     = is_pi(p4z2)
+        mask_mu_rho    = (is_rho(p4z2)  | is_a1DM2(p4z2))
+        mask_mu_a1     = (is_a1DM10(p4z2) | is_a1DM11(p4z2))
 
 
+        #from IPython import embed; embed()
+        
 
         # mu-pi
         logger.info('mu-pi')
-        observables = extract_observables(observables, p4zcandinfo, mask_mu_pi, 'mu', 'pi', get_observables_mutau, keylist=['p4z2'])
+        observables = extract_observables(observables, p4zcandinfo, mask_mu_pi, 'mu', 'pi', get_observables_mutau, keylist=['p4z2'],
+                                          reg_algo='fastMTT')
+
+        #from IPython import embed; embed()
         
         # mu-rho
         logger.info('mu-rho')
         observables = extract_observables(observables, p4zcandinfo, mask_mu_rho, 'mu', 'rho', get_observables_mutau, keylist=['p4z2'])
 
+        #from IPython import embed; embed()
+        
         # mu-a1
         logger.info('mu-a1')
-        observables = extract_observables(observables, p4zcandinfo, mask_mu_a1, 'mu', 'a1', get_observables_mutau, keylist=['p4z2','p4z2pi'])
+        observables = extract_observables(observables, p4zcandinfo, mask_mu_a1, 'mu', 'a1', get_observables_mutau, keylist=['p4z2'],
+                                          reg_algo='fastMTT')
 
+        #from IPython import embed; embed()
         
     # -------------------------------------------------------------------- #
     #                              tau-tau                                 #
@@ -148,17 +178,17 @@ def ProduceObservables(
         observables = copy.deepcopy(dummy_observables)
         
         # tau1 to pion
-        mask_pi_pi   = is_pi(p4h1)  &  is_pi(p4h2)
-        mask_pi_rho  = is_pi(p4h1)  &  (is_rho(p4h2) | is_a1DM2(p4h2))       # add DM2 as rho
-        mask_pi_a1   = is_pi(p4h1)  &  (is_a1DM10(p4h2) | is_a1DM11(p4h2))   # add DM11 as a1
+        mask_pi_pi   = is_pi(p4z1)  &  is_pi(p4z2)
+        mask_pi_rho  = is_pi(p4z1)  &  (is_rho(p4z2) | is_a1DM2(p4z2))       # add DM2 as rho
+        mask_pi_a1   = is_pi(p4z1)  &  (is_a1DM10(p4z2) | is_a1DM11(p4z2))   # add DM11 as a1
         # tau1 to rho
-        mask_rho_pi  = (is_rho(p4h1) | is_a1DM2(p4h1)) &  is_pi(p4h2)                           # add DM2 as rho
-        mask_rho_rho = (is_rho(p4h1) | is_a1DM2(p4h1)) &  (is_rho(p4h2) | is_a1DM2(p4h2))
-        mask_rho_a1  = (is_rho(p4h1) | is_a1DM2(p4h1)) &  (is_a1DM10(p4h2) | is_a1DM11(p4h2))   # add DM11 as a1
+        mask_rho_pi  = (is_rho(p4z1) | is_a1DM2(p4z1)) &  is_pi(p4z2)                           # add DM2 as rho
+        mask_rho_rho = (is_rho(p4z1) | is_a1DM2(p4z1)) &  (is_rho(p4z2) | is_a1DM2(p4z2))
+        mask_rho_a1  = (is_rho(p4z1) | is_a1DM2(p4z1)) &  (is_a1DM10(p4z2) | is_a1DM11(p4z2))   # add DM11 as a1
         # tau1 to a1
-        mask_a1_pi   = (is_a1DM10(p4h1) | is_a1DM11(p4h1))  &  is_pi(p4h2)                           # add DM11 as a1
-        mask_a1_rho  = (is_a1DM10(p4h1) | is_a1DM11(p4h1))  &  (is_rho(p4h2) | is_a1DM2(p4h2))       # add DM11 as a1
-        mask_a1_a1   = (is_a1DM10(p4h1) | is_a1DM11(p4h1))  &  (is_a1DM10(p4h2) | is_a1DM11(p4h2))   # add DM11 as a1
+        mask_a1_pi   = (is_a1DM10(p4z1) | is_a1DM11(p4z1))  &  is_pi(p4z2)                           # add DM11 as a1
+        mask_a1_rho  = (is_a1DM10(p4z1) | is_a1DM11(p4z1))  &  (is_rho(p4z2) | is_a1DM2(p4z2))       # add DM11 as a1
+        mask_a1_a1   = (is_a1DM10(p4z1) | is_a1DM11(p4z1))  &  (is_a1DM10(p4z2) | is_a1DM11(p4z2))   # add DM11 as a1
         
         
         logger.info('pi-pi')
@@ -166,7 +196,8 @@ def ProduceObservables(
         logger.info('pi-rho')
         observables = extract_observables(observables, p4zcandinfo, mask_pi_rho,  'pi',  'rho',  get_observables_tautau, keylist=['p4z1'])
         logger.info('pi-a1')
-        observables = extract_observables(observables, p4zcandinfo, mask_pi_a1,   'pi',  'a1',   get_observables_tautau, keylist=['p4z1'])
+        observables = extract_observables(observables, p4zcandinfo, mask_pi_a1,   'pi',  'a1',   get_observables_tautau, keylist=['p4z1'],
+                                          reg_algo='fastMTT')
 
         logger.info('rho-pi')
         observables = extract_observables(observables, p4zcandinfo, mask_rho_pi,  'rho', 'pi',   get_observables_tautau, keylist=['p4z1'])
@@ -176,7 +207,8 @@ def ProduceObservables(
         observables = extract_observables(observables, p4zcandinfo, mask_rho_a1,  'rho', 'a1',   get_observables_tautau, keylist=['p4z1'])
         
         logger.info('a1-pi')
-        observables = extract_observables(observables, p4zcandinfo, mask_a1_pi,   'a1', 'pi',    get_observables_tautau, keylist=['p4z1'])
+        observables = extract_observables(observables, p4zcandinfo, mask_a1_pi,   'a1', 'pi',    get_observables_tautau, keylist=['p4z1'],
+                                          reg_algo='fastMTT')
         logger.info('a1-rho')
         observables = extract_observables(observables, p4zcandinfo, mask_a1_rho,  'a1', 'rho',   get_observables_tautau, keylist=['p4z1'])
         logger.info('a1-a1')
@@ -209,7 +241,7 @@ def ProduceRecoObservables(
 
     logger.info("Reco level")
     
-    events, observables = self[ProduceObservables](events, p4zcandinfo)
+    events, observables = self[ProduceObservables](events, p4zcandinfo, run_reg_algo=True)
 
     vars = getlistofobservables()
     for var in vars:

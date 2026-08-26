@@ -8,8 +8,6 @@ import order as od
 
 from zttpol.config.trigger_util import Trigger, TriggerLeg
 
-
-
 # ----------------------------------------------- #
 #                   Run2 2016 UL                  #
 # ----------------------------------------------- #
@@ -101,7 +99,7 @@ def add_triggers_2016(config: od.Config, postfix: str) -> None:
 # ----------------------------------------------- #
 #                   Run2 2017 UL                  #
 # ----------------------------------------------- #
-def add_triggers_UL2017(config: od.Config) -> None:
+def add_triggers_2017(config: od.Config, postfix: str) -> None:
     """
     Adds all triggers to a *config*. For the conversion from filter names to trigger bits, see
     https://github.com/cms-sw/cmssw/blob/master/PhysicsTools/NanoAOD/python/triggerObjects_cff.py.
@@ -167,7 +165,7 @@ def add_triggers_UL2017(config: od.Config) -> None:
 # ----------------------------------------------- #
 #                   Run2 2018 UL                  #
 # ----------------------------------------------- #
-def add_triggers_2018(config: od.Config) -> None:
+def add_triggers_2018(config: od.Config, postfix: str) -> None:
     """
     Adds all triggers to a *config*. For the conversion from filter names to trigger bits, see
     https://github.com/cms-sw/cmssw/blob/master/PhysicsTools/NanoAOD/python/triggerObjects_cff.py.
@@ -176,89 +174,112 @@ def add_triggers_2018(config: od.Config) -> None:
         # ===>>> single muon
         Trigger(
             name="HLT_IsoMu24",
-            id=131000,
+            id=13001,
             legs=[
                 TriggerLeg(
                     pdg_id=13,
                     min_pt=25.0,
-                    max_abseta=None,
+                    min_pt_online=25.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltL3crIsoL1sSingleMu22L1f0L2f10QL3f24QL3trkIsoFiltered0p07
-                    trigger_bits=2,
+                    trigger_bits=2**1,
                 ),
             ],
             tags={"single_trigger", "single_mu", "channel_mu_tau"},
         ),
         Trigger(
             name="HLT_IsoMu27",
-            id=132000,
+            id=13002,
             legs=[
                 TriggerLeg(
                     pdg_id=13,
-                    min_pt=25.0,
-                    max_abseta=None,
+                    min_pt=28.0,
+                    min_pt_online=27.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltL3crIsoL1sMu22Or25L1f0L2f10QL3f27QL3trkIsoFiltered0p07
-                    trigger_bits=2,
+                    trigger_bits=2**1,
                 ),
             ],
             tags={"single_trigger", "single_mu", "channel_mu_tau"},
         ),
         # ===>>> mu-tauh
+        # HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1
+        # /SingleMuon/Run2018A-UL2018_NanoAODv15-v2/NANOAOD || Dataset run range    : 315257 - 316995 || Trigger-valid range  : 315257 - 316995
+        # /SingleMuon/Run2018B-UL2018_NanoAODv15-v2/NANOAOD || Dataset run range    : 317080 - 319310 || Trigger-valid range  : 317080 - 317488
+        # /SingleMuon/Run2018C-UL2018_NanoAODv15-v2/NANOAOD || Dataset run range    : 319337 - 320065 || Trigger-valid range  : none
+        # /SingleMuon/Run2018D-UL2018_NanoAODv15-v2/NANOAOD || Dataset run range    : 320500 - 325175 || Trigger-valid range  : none
         Trigger(
             name="HLT_IsoMu20_eta2p1_LooseChargedIsoPFTau27_eta2p1_CrossL1",
             id=13151,
-            run_range=(None,317509), #315974),
+            run_range=(None,317509),
             legs=[
                 TriggerLeg(
                     pdg_id=13,
-                    min_pt=22.0, # 21.0
-                    max_abseta=2.1, # None
+                    min_pt=21.0,
+                    min_pt_online=20.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltL3crIsoL1sMu18erTau24erIorMu20erTau24erL1f0L2f10QL3f20QL3trkIsoFiltered0p07
                     # hltOverlapFilterIsoMu20LooseChargedIsoPFTau27L1Seeded
-                    trigger_bits=64, #2 + 64,
+                    trigger_bits=2**1 + 2**6,
                 ),
                 TriggerLeg(
                     pdg_id=15, 
                     min_pt=32.0,
-                    max_abseta=2.1,  #None,
+                    min_pt_online=27.0,
+                    max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltSelectedPFTau27LooseChargedIsolationAgainstMuonL1HLTMatched or
                     # hltOverlapFilterIsoMu20LooseChargedIsoPFTau27L1Seeded
-                    trigger_bits=64, #1024 + 512,
+                    trigger_bits=2**9 + 2**10,
                 ),
             ],
+            # the non-HPS path existed only for data
             applies_to_dataset=(lambda dataset_inst: dataset_inst.is_data and dataset_inst.x.era <= "B"),
             tags={"cross_trigger", "cross_mu_tau", "channel_mu_tau"},
         ),
+        # HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_TightID_CrossL1
+        # /SingleMuon/Run2018A-UL2018_NanoAODv15-v2/NANOAOD || Trigger-valid range  : none
+        # /SingleMuon/Run2018B-UL2018_NanoAODv15-v2/NANOAOD || Trigger-valid range  : none
+        # /SingleMuon/Run2018C-UL2018_NanoAODv15-v2/NANOAOD || Trigger-valid range  : none
+        # /SingleMuon/Run2018D-UL2018_NanoAODv15-v2/NANOAOD || Trigger-valid range  : none
         Trigger(
             name="HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_TightID_CrossL1",
-            id=13153,
+            id=13152,
             run_range=(317508,None),
             legs=[
                 TriggerLeg(
                     pdg_id=13,
-                    min_pt=22.0,
+                    min_pt=21.0,
+                    min_pt_online=20.0,
                     max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltL3crIsoL1sMu18erTau24erIorMu20erTau24erL1f0L2f10QL3f20QL3trkIsoFiltered0p07
                     # hltOverlapFilterIsoMu20LooseChargedIsoPFTau27L1Seeded
-                    trigger_bits=64, #2 + 64,
+                    trigger_bits=2**1 + 2**6,
                 ),
                 TriggerLeg(
-                    pdg_id=15,
+                    pdg_id=15, 
                     min_pt=32.0,
+                    min_pt_online=27.0,
                     max_abseta=2.1,
+                    max_abseta_online=2.1,
                     # filter names:
                     # hltSelectedPFTau27LooseChargedIsolationAgainstMuonL1HLTMatched or
                     # hltOverlapFilterIsoMu20LooseChargedIsoPFTau27L1Seeded
-                    trigger_bits=512, #1024 + 512,
+                    trigger_bits=2**9 + 2**10,
                 ),
             ],
-            applies_to_dataset=(lambda dataset_inst: dataset_inst.is_mc or dataset_inst.x.era >= "B"),
+            applies_to_dataset=(lambda dataset_inst: dataset_inst.is_mc or dataset_inst.x.era >= "B"), # why "B"? should be for MC only, no?
             tags={"cross_trigger", "cross_mu_tau", "channel_mu_tau"},
-        ),        
+        ),
     ])
 
 
@@ -306,7 +327,8 @@ def add_triggers_2022(config: od.Config, postfix: str) -> None:
         # tau : https://github.com/cms-sw/cmssw/blob/CMSSW_13_0_X/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L143
         # https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv14/2024Prompt/doc_EGamma1_Run2024D-PromptReco-v1.html#TrigObj
         Trigger(
-            name="HLT_IsoMu20_eta2p1_LooseDeepTauPFTauHPS27_eta2p1_CrossL1",
+            #name="HLT_IsoMu20_eta2p1_LooseDeepTauPFTauHPS27_eta2p1_CrossL1",
+            name="HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_CrossL1",
             id=13151,
             legs=[
                 TriggerLeg(

@@ -38,10 +38,10 @@ def add_ABCD_categories(config: od.Config) -> None:
      keep ids from 1500 with 1500 interval, up to 30000
     """
     # DESY
-    add_category(config,name="DRnum",  id=10000,  selection="cat_os_noniso1_iso2_lowmt",      label="dr_num",   tags={"os","noniso1", "iso2", "lowmt" })
-    add_category(config,name="DRden",  id=20000,  selection="cat_ss_noniso1_iso2_lowmt",      label="dr_den",   tags={"ss","noniso1", "iso2", "lowmt" })
-    add_category(config,name="AR",     id=30000,  selection="cat_ss_iso1_iso2_lowmt",         label="ar",       tags={"ss","iso1",    "iso2", "lowmt" })
-    add_category(config,name="SR",     id=40000,  selection="cat_os_iso1_iso2_lowmt",         label="sr",       tags={"os","iso1",    "iso2", "lowmt" })
+    add_category(config,name="DRnum",  id=10000,  selection="cat_os_noniso1_iso2_lowmt",      label="dr_num",   tags={"os","noniso", "iso2", "lowmt" })
+    add_category(config,name="DRden",  id=20000,  selection="cat_ss_noniso1_iso2_lowmt",      label="dr_den",   tags={"ss","noniso", "iso2", "lowmt" })
+    add_category(config,name="AR",     id=30000,  selection="cat_ss_iso1_iso2_lowmt",         label="ar",       tags={"ss","iso",    "iso2", "lowmt" })
+    add_category(config,name="SR",     id=40000,  selection="cat_os_iso1_iso2_lowmt",         label="sr",       tags={"os","iso",    "iso2", "lowmt" })
     
 
 @call_once_on_config()

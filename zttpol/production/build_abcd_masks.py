@@ -32,9 +32,8 @@ set_ak_column_i64 = functools.partial(set_ak_column, value_type=np.int64)
     uses={
         "channel_id",
         "zcand.*",
-        "Jet.pt", "bJet.pt",
-        IF_RUN2("MET.pt", "MET.phi"),
-        IF_RUN3("PuppiMET.pt", "PuppiMET.phi"),
+        "Jet.pt", #"bJet.pt",
+        "PuppiMET.pt", "PuppiMET.phi",
         #"classifier_score",
     },
     produces={
@@ -72,12 +71,17 @@ def build_abcd_masks(
         **kwargs
 ) -> ak.Array:
 
+
+    DM = 'decayMode'
+    
     # get channels from the config
     ch_emu    = self.config_inst.get_channel("emu")
     ch_etau   = self.config_inst.get_channel("etau")
     ch_mutau  = self.config_inst.get_channel("mutau")
     ch_tautau = self.config_inst.get_channel("tautau")
-
+    ch_ee     = self.config_inst.get_channel("ee")
+    ch_mumu   = self.config_inst.get_channel("mumu")
+    
     zcand = ak.with_name(events.zcand, "PtEtaPhiMLorentzVector")
     z1 = zcand[:,0:1]
     z2 = zcand[:,1:2]
@@ -87,10 +91,11 @@ def build_abcd_masks(
     is_os = ak.fill_none(ak.any(is_os, axis=1), False)
 
     # BVETO --> events with / without bjets
-    is_b_veto = ak.num(events.bJet.pt, axis=1) == 0
-
+    #is_b_veto = ak.num(events.bJet.pt, axis=1) == 0
+    is_b_veto = ak.num(events.Jet.pt, axis=1) == 0
+    
     # LOWMT --> Required for leptonic channels
-    met = events.MET if self.config_inst.campaign.x.run == 2 else events.PuppiMET
+    met = events.PuppiMET #events.MET if self.config_inst.campaign.x.run == 2 else events.PuppiMET
     met = ak.with_name(met, "PtEtaPhiMLorentzVector")
     is_low_mt = transverse_mass(z1, met) < 65.0
     is_high_mt = ~is_low_mt & (transverse_mass(z1, met) < 200.0)
@@ -98,27 +103,27 @@ def build_abcd_masks(
     is_low_mt  = ak.fill_none(ak.any(is_low_mt, axis=1), False)
     is_high_mt = ak.fill_none(ak.any(is_high_mt, axis=1), False)
 
-    is_lep_1 = z1.decayMode < 0
+    is_lep_1 = z1[DM] < 0
     is_lep_1 = ak.fill_none(ak.any(is_lep_1, axis=1), False)
 
     # IPSig
     is_ipsig_0to1_1 = np.abs(z1.IPsig) < 1.0
     is_ipsig_0to1_1 = ak.fill_none(ak.any(is_ipsig_0to1_1, axis=1), False)
 
-    is_pi_1 = z1.decayMode[:,0] == 0            # z1 to pion
-    is_pi_2 = z2.decayMode[:,0] == 0            # z2 to pion
+    is_pi_1 = z1[DM][:,0] == 0            # z1 to pion
+    is_pi_2 = z2[DM][:,0] == 0            # z2 to pion
 
-    is_rho_1 = z1.decayMode[:,0] == 1           # z1 to rho
-    is_rho_2 = z2.decayMode[:,0] == 1           # z2 to rho
+    is_rho_1 = z1[DM][:,0] == 1           # z1 to rho
+    is_rho_2 = z2[DM][:,0] == 1           # z2 to rho
 
-    is_a1_1pr_2pi0_1 = z1.decayMode[:,0] == 2   # z1 to a1 (DM 2)
-    is_a1_1pr_2pi0_2 = z2.decayMode[:,0] == 2   # z2 to a1 (DM 2)
+    is_a1_1pr_2pi0_1 = z1[DM][:,0] == 2   # z1 to a1 (DM 2)
+    is_a1_1pr_2pi0_2 = z2[DM][:,0] == 2   # z2 to a1 (DM 2)
 
-    is_a1_3pr_0pi0_1 = z1.decayMode[:,0] == 10  # z1 to a1 (DM 10)
-    is_a1_3pr_0pi0_2 = z2.decayMode[:,0] == 10  # z2 to a1 (DM 10)
+    is_a1_3pr_0pi0_1 = z1[DM][:,0] == 10  # z1 to a1 (DM 10)
+    is_a1_3pr_0pi0_2 = z2[DM][:,0] == 10  # z2 to a1 (DM 10)
 
-    is_a1_3pr_1pi0_1 = z1.decayMode[:,0] == 11  # z1 to a1 (DM 11)
-    is_a1_3pr_1pi0_2 = z2.decayMode[:,0] == 11  # z2 to a1 (DM 11)
+    is_a1_3pr_1pi0_1 = z1[DM][:,0] == 11  # z1 to a1 (DM 11)
+    is_a1_3pr_1pi0_2 = z2[DM][:,0] == 11  # z2 to a1 (DM 11)
 
     # njet categories
     has_0jet = ak.num(events.Jet.pt, axis=1) == 0
@@ -127,19 +132,20 @@ def build_abcd_masks(
 
 
     # tau tagger wp
-    tau_tagger      = self.config_inst.x.deep_tau_tagger
-    tau_tagger_info = self.config_inst.x.deep_tau_info[tau_tagger]
+    #tau_tagger      = self.config_inst.x.deep_tau_tagger
+    #tau_tagger_info = self.config_inst.x.deep_tau_info[tau_tagger]
 
-    vs_jet_wp       = lambda tau_tagger_info, ch : tau_tagger_info.wp.vs_j[tau_tagger_info.vs_j[ch]]
-
+    #vs_jet_wp       = lambda tau_tagger_info, ch : tau_tagger_info.wp.vs_j[tau_tagger_info.vs_j[ch]]
+    vs_jet_wp  = lambda channel : self.config_inst.x.tauIDWPs_config["DeepTau2018v2p5"].vs_j[channel]
+    
     # ISO1 --> required for tau-tau channel only to categorise events on the basis of
     # leading tau isolation
     is_iso_1_dummy = z1.rawIdx < 0
     is_iso_1 = ak.where(events.channel_id == ch_tautau.id,
-                        ak.values_astype(z1.isolation, np.int32) >= vs_jet_wp(tau_tagger_info, ch_tautau.name),
-                        ak.where(events.channel_id == ch_mutau.id,
+                        ak.values_astype(z1.isolation, np.int32) >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_j[vs_jet_wp(ch_tautau.name)],
+                        ak.where(((events.channel_id == ch_mutau.id) | (events.channel_id == ch_mumu.id)),
                                  z1.isolation <= 0.15,
-                                 ak.where(events.channel_id == ch_etau.id,
+                                 ak.where(((events.channel_id == ch_etau.id) | (events.channel_id == ch_ee.id)),
                                           z1.isolation <= 0.3,
                                           is_iso_1_dummy)
                                  )
@@ -147,9 +153,9 @@ def build_abcd_masks(
     is_iso_1 = ak.fill_none(ak.any(is_iso_1, axis=1), False)
 
     # ISO2 --> required for all channels
-    id_etau_pass   = z2.isolation >= vs_jet_wp(tau_tagger_info, ch_etau.name)
-    id_mutau_pass  = z2.isolation >= vs_jet_wp(tau_tagger_info, ch_mutau.name)
-    id_tautau_pass = z2.isolation >= vs_jet_wp(tau_tagger_info, ch_tautau.name)
+    id_etau_pass   = z2.isolation >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_j[vs_jet_wp(ch_etau.name)]
+    id_mutau_pass  = z2.isolation >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_j[vs_jet_wp(ch_mutau.name)]
+    id_tautau_pass = z2.isolation >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_j[vs_jet_wp(ch_tautau.name)]
     
     is_iso_2 = ak.where(events.channel_id == ch_tautau.id,
                         id_tautau_pass,
@@ -160,6 +166,14 @@ def build_abcd_masks(
                                           is_iso_1_dummy)
                                  )
                         )
+    # iso_2 for ee,mumu and emu channels
+    is_iso_2 = ak.where(events.channel_id == ch_ee.id,
+                        z2.isolation <= 0.3,
+                        ak.where(((events.channel_id == ch_mumu.id) | (events.channel_id == ch_emu.id)),
+                                 z2.isolation <= 0.15,
+                                 is_iso_2)
+                        )
+    
     is_iso_2 = ak.fill_none(ak.any(is_iso_2, axis=1), False)
 
     # REAL1 --> to get the contribution of real MC taus only with genPartFlav > 0
@@ -168,18 +182,18 @@ def build_abcd_masks(
     is_real_1 = is_fake_1 = events.event >= 0
 
     if self.dataset_inst.is_mc:
-        is_real_1 = ak.where(events.channel_id == ch_etau.id,
+        is_real_1 = ak.where(((events.channel_id == ch_etau.id) | (events.channel_id == ch_ee.id)),
                              ((z1.genPartFlav == 1) | (z1.genPartFlav == 15) | (z1.genPartFlav == 22)), # true ele
-                             ak.where(events.channel_id == ch_mutau.id,
+                             ak.where(((events.channel_id == ch_mutau.id) | (events.channel_id == ch_mumu.id)),
                                       ((z1.genPartFlav == 1) | (z1.genPartFlav == 15)), # true mu
                                       ak.where(events.channel_id == ch_tautau.id,
                                                ((z1.genPartFlav > 0) & (z1.genPartFlav < 6)), # true tau
                                                is_iso_1_dummy)))
         is_real_1 = ak.fill_none(ak.any(is_real_1, axis=1), False)
 
-        is_fake_1 = ak.where(events.channel_id == ch_etau.id,
+        is_fake_1 = ak.where(((events.channel_id == ch_etau.id) | (events.channel_id == ch_ee.id)),
                              ((z1.genPartFlav == 0) | (z1.genPartFlav == 3) | (z1.genPartFlav == 4) | (z1.genPartFlav == 5)), # fake ele
-                             ak.where(events.channel_id == ch_mutau.id,
+                             ak.where(((events.channel_id == ch_mutau.id) | (events.channel_id == ch_mumu.id)),
                                       ((z1.genPartFlav == 0) | (z1.genPartFlav == 3) | (z1.genPartFlav == 4) | (z1.genPartFlav == 5)), # true mu
                                       ak.where(events.channel_id == ch_tautau.id,
                                                ((z1.genPartFlav == 0) | (z1.genPartFlav == 6)), # true tau
@@ -192,7 +206,7 @@ def build_abcd_masks(
 
     if self.dataset_inst.is_mc:
         is_real_2 = (z2.genPartFlav > 0) & (z2.genPartFlav < 6)
-        if self.dataset_inst.has_tag("is_w") or self.dataset_inst.has_tag("no_lhe_weights") or self.dataset_inst.has_tag("is_st"):
+        if self.dataset_inst.has_tag("is_w") or self.dataset_inst.has_tag("no_lhe_weights") or self.dataset_inst.has_tag("st"):
             # temporary, fake contribution from WJets Simulation, not data driven
             is_real_2 = ak.where(events.channel_id == ch_etau.id,
                                  z2.genPartFlav >= 0,

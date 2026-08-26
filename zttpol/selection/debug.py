@@ -157,16 +157,67 @@ def debug_main(events, results, triggers, **kwargs):
         field = events[key]
         try:
             field_arrow = ak.to_arrow(field)
-            logger.info(f"{key}: ✅ OK")
+            logger.info(f"{key}: ✅ PyArrow OK")
         except Exception as e:
-            logging.critical(f"{key}: ❌ Error — {e}")
+            logging.critical(f"{key}: ❌ PyArrow Error — {e}")
             for k in field.fields:
                 f = field[k]
                 try:
                     field_arrow = ak.to_arrow(f)
-                    logger.info(f"{k}: ✅ OK Subfield")
+                    logger.info(f"{k}: ✅ PyArrow OK Subfield")
                 except Exception as e:
-                    logger.critical(f"{k}: ❌ Error — {e} Subfield")
+                    logger.critical(f"{k}: ❌ PyArrow Error — {e} Subfield")
+
+        # --------------------------------------------------
+        # Non-finite values (NaN, +inf, -inf)
+        # --------------------------------------------------
+        if field.fields:
+            # Record-type field, e.g. Muon, Electron, Jet...
+            for k in field.fields:
+                f = field[k]
+
+                try:
+                    finite = np.isfinite(f)
+                    finite = ak.fill_none(finite, True)
+                    
+                    n_nonfinite = ak.sum(~finite, axis=None)
+
+                    if n_nonfinite:
+                        logger.critical(
+                            f"{key}.{k}: ❌ {n_nonfinite} non-finite values"
+                        )
+                    else:
+                        logger.info(
+                            f"{key}.{k}: ✅ all values finite"
+                        )
+
+                except (TypeError, ValueError):
+                    # Non-numeric fields, strings, records, etc.
+                    logger.debug(
+                        f"{key}.{k}: skipping finite check (non-numeric)"
+                    )
+
+        else:
+            # Simple top-level numeric field
+            try:
+                finite = np.isfinite(field)
+                finite = ak.fill_none(finite, True)
+                
+                n_nonfinite = ak.sum(~finite, axis=None)
+
+                if n_nonfinite:
+                    logger.critical(
+                        f"{key}: ❌ {n_nonfinite} non-finite values"
+                    )
+                else:
+                    logger.info(
+                        f"{key}: ✅ all values finite"
+                    )
+
+            except (TypeError, ValueError):
+                logger.debug(
+                    f"{key}: skipping finite check (non-numeric)"
+                )
                     
 
     

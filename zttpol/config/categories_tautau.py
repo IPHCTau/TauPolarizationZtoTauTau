@@ -140,12 +140,13 @@ def add_categories(config: od.Config) -> None:
         "channel": CategoryGroup(['tautau'], is_complete=True, has_overlap=False),
         "RorF"   : CategoryGroup(['real_1'], is_complete=False, has_overlap=False),
         "abcd"   : CategoryGroup(['hadA','hadB','hadA0','hadB0','hadC0','hadD0','hadC','hadD'], is_complete=True, has_overlap=False),
-        "cp"     : CategoryGroup(['pi_pi','pi_rho','pi_a1dm2','pi_a1dm10','pi_a1dm11',
-                                  'rho_rho','rho_a1dm2','rho_a1dm10','rho_a1dm11',
-                                  'a1dm2_a1dm10','a1dm2_a1dm11',
-                                  'a1dm10_a1dm10','a1dm10_a1dm11',
-                                  'a1dm11_a1dm11'], is_complete=True, has_overlap=False),
+        "cp"     : CategoryGroup(['rho_1','a1dm10_a1dm10','pi_a1dm10','pi_pi'], is_complete=True, has_overlap=False)
     }
+    #"cp"     : CategoryGroup(['pi_pi','pi_rho','pi_a1dm2','pi_a1dm10','pi_a1dm11',
+    #                          'rho_rho','rho_a1dm2','rho_a1dm10','rho_a1dm11',
+    #                          'a1dm2_a1dm10','a1dm2_a1dm11',
+    #                          'a1dm10_a1dm10','a1dm10_a1dm11',
+    #                          'a1dm11_a1dm11'], is_complete=True, has_overlap=False),
 
     create_category_combinations(config=config,
                                  categories=main_categories,

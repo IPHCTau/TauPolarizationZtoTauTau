@@ -160,6 +160,7 @@ def apply_fastMTT(
             behavior=coffea.nanoevents.methods.vector.behavior,
         )
 
+        """
         zcand_pt_fastMTT  = ak.concatenate([p4_h1_reg.pt, p4_h2_reg.pt], axis=1)
         zcand_eta_fastMTT = ak.concatenate([p4_h1_reg.eta, p4_h2_reg.eta], axis=1)
         zcand_phi_fastMTT = ak.concatenate([p4_h1_reg.phi, p4_h2_reg.phi], axis=1)
@@ -202,7 +203,7 @@ def apply_fastMTT(
         logger.info("Checking fastMTT mass")
         logger.warning(f"Out of {len(mass_h)} events, {ak.sum(nan_mass_mask)} events have unphysical values for fastMTT mass")
         logger.warning(f"Channel wise, e-tau has {ak.sum(nan_mass_mask_et)}, mu-tau has {ak.sum(nan_mass_mask_mt)}, and tau-tau has {ak.sum(nan_mass_mask_tt)} events with unphysical values")
-
+        """
     else:
         logger.critical("Set [cfg.x.run_fastMTT = True] in the main config to make fastMTT run ... setting dummy variables as output")
 
@@ -213,9 +214,7 @@ def apply_fastMTT(
     #events = set_ak_column(events, "zcand.mass_fastMTT", zcand_mass_fastMTT)        
     #events = set_ak_column_f32(events, "zcand_invm_fastMTT", mass_h)
 
-
     
-    
-    return events, zcand_pt_fastMTT, mass_h
+    #return events, zcand_pt_fastMTT, mass_h
 
-
+    return p4_h1_reg,p4_h2_reg
