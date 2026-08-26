@@ -42,19 +42,26 @@ def main(self: HistProducer, events: ak.Array, **kwargs) -> ak.Array:
 @main.init
 def main_init(self: HistProducer) -> None:
     #self.weight_columns = {}
+    weights = self.config_inst.x.event_weights
+    self.weight_columns = []
+    """
     weights = {}
     self.weight_columns = []
-    if self.config_inst.x.channel == "mutau":
+    if self.config_inst.x.channel == "ee":
+        weights = self.config_inst.x.event_ee_weights
+    elif self.config_inst.x.channel == "mumu":
+        weights = self.config_inst.x.event_mumu_weights
+    elif self.config_inst.x.channel == "emu":
+        weights = self.config_inst.x.event_emu_weights
+    elif self.config_inst.x.channel == "mutau":
         weights = self.config_inst.x.event_mutau_weights
     elif self.config_inst.x.channel == "etau":
         weights = self.config_inst.x.event_etau_weights
     elif self.config_inst.x.channel == "tautau":
         weights = self.config_inst.x.event_tautau_weights
-    #elif self.config_inst.x.channel == "emu":
-    #    weights = self.config_inst.x.event_emu_weights
     else:
         raise RuntimeError(f'Wrong channel : {self.config_inst.x.channel}')
-
+    """
     # helpers to match to kept or dropped weights
     do_keep = pattern_matcher(self.keep_weights) if self.keep_weights else (lambda _: True)
     do_drop = pattern_matcher(self.drop_weights) if self.drop_weights else (lambda _: False)
