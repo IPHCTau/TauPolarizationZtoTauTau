@@ -10,6 +10,7 @@ import law
 import functools
 
 from columnflow.calibration import Calibrator, calibrator
+from columnflow.calibration.cms.muon import muon_sr
 from columnflow.calibration.cms.tau import tec
 
 from columnflow.columnar_util import set_ak_column
@@ -20,8 +21,8 @@ from columnflow.production.util import attach_coffea_behavior
 
 from columnflow.util import maybe_import
 
-
 from zttpol.calibration.calibrate_base import calibrate_base
+#from zttpol.calibration.tau import tau_energy_scale
 #from zttpol.calibration.tau_cf import tec
 
 from zttpol.util import IF_RUN2, IF_RUN3
@@ -36,7 +37,7 @@ logger = law.logger.get_logger(__name__)
 
 
 # ----------------------------------------- #
-#             tautau Calibrator             #
+#              mutau Calibrator             #
 # ----------------------------------------- #
 @calibrator(
     uses={
@@ -47,7 +48,7 @@ logger = law.logger.get_logger(__name__)
     },
     exposed=True,
 )
-def calibrate_tautau(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
+def calibrate_mumu(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     """
       Calibrations used so far:
         - Base
@@ -57,7 +58,14 @@ def calibrate_tautau(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     events = self[calibrate_base](events, task=task)
 
     # data/mc specific calibrations
-    if self.dataset_inst.is_mc:
+    if self.dataset_inst.is_data:
+        if self.has_dep(self.muon_sr_nominal_cls):
+            # nominal muon scale and resolution
+            events = self[self.muon_sr_nominal_cls](events, **kwargs)
+    else:
+        if self.has_dep(self.muon_sr_full_cls):
+            # full muon scale and resolution
+            events = self[self.muon_sr_full_cls](events, **kwargs)
         # full tec
         events = self[self.tec_full_cls](events, **kwargs)
 
@@ -65,8 +73,10 @@ def calibrate_tautau(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
 
 
 
-@calibrate_tautau.init
-def calibrate_tautau_init(self: Calibrator, **kwargs) -> None:
+@calibrate_mumu.init
+def calibrate_mumu_init(self: Calibrator, **kwargs) -> None:
+    super(calibrate_mumu, self).init_func(**kwargs)
+    
     # set the name of the met collection to use
     met_name = self.config_inst.x.met_name
     raw_met_name = self.config_inst.x.raw_met_name
@@ -83,17 +93,36 @@ def calibrate_tautau_init(self: Calibrator, **kwargs) -> None:
             "met_name": met_name,
             "propagate_met": False,  # not needed after JET-to-MET propagation
         })
+        add_calib_cls("tec_nominal", tec, cls_dict={
+            "met_name": met_name,
+            "propagate_met": False,  # not needed after JET-to-MET propagation
+            "with_uncertainties": False,
+        })
+        # derive muon scale and resolution calibrators
+        add_calib_cls("muon_sr_full", muon_sr, cls_dict={
+            "store_original": True,
+        })
+        add_calib_cls("muon_sr_nominal", muon_sr, cls_dict={
+            "store_original": True,
+            "with_uncertainties": False,
+        })
 
         # change the flag
         self.config_inst.set_aux(flag, True)
 
-        
+
     # store references to classes
     self.tec_full_cls = self.config_inst.x.calib_tec_full_cls
+    self.tec_nominal_cls = self.config_inst.x.calib_tec_nominal_cls
+    self.muon_sr_full_cls = self.config_inst.x.calib_muon_sr_full_cls
+    self.muon_sr_nominal_cls = self.config_inst.x.calib_muon_sr_nominal_cls
     
     # collect derived calibrators and add them to the calibrator uses and produces
     derived_calibrators = {
         self.tec_full_cls,
+        self.tec_nominal_cls,
+        ~IF_RUN2(self.muon_sr_full_cls),
+        ~IF_RUN2(self.muon_sr_nominal_cls),
     }
 
     self.uses |= derived_calibrators
