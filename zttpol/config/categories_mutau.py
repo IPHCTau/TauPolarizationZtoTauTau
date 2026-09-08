@@ -108,11 +108,24 @@ def add_categories(config: od.Config) -> None:
         return "__".join(cat.name for cat in categories.values() if cat)
 
 
-    def kwargs_fn(categories: dict[str, od.Category]):
+    def kwargs_fn(categories: dict[str, od.Category], add_qcd_group: bool = True):
+        # build auxiliary information
+        aux = {}
+        # DRnum, DRden, AR and SR belonging to the same combination
+        # receive an identical qcd_group.
+        if add_qcd_group and "abcd" in categories:
+            aux["qcd_group"] = name_fn({
+                name: cat
+                for name, cat in categories.items()
+                if name != "abcd"
+            })
+
+        # return the desired kwargs
         return {
             "id": sum([c.id for c in categories.values()]),
             "label": "+".join([c.label for c in categories.values()]),
             "tags": set.union(*[cat.tags for cat in categories.values() if cat]),
+            "aux": aux,
         }
 
     main_categories = {
