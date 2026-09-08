@@ -241,7 +241,8 @@ def ProduceRecoObservables(
 
     logger.info("Reco level")
     
-    events, observables = self[ProduceObservables](events, p4zcandinfo, run_reg_algo=True)
+    #events, observables = self[ProduceObservables](events, p4zcandinfo, run_reg_algo=True)
+    events, observables = self[ProduceObservables](events, p4zcandinfo, run_reg_algo=False)
 
     vars = getlistofobservables()
     for var in vars:
