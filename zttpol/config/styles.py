@@ -146,7 +146,8 @@ def stylize_processes(config: od.Config) -> None:
     cfg.x.get_line_style_from_sequence = lambda i: cfg.x.line_styles[i % len(cfg.x.line_styles)]
     
     cfg.x.proc_col_label = DotDict.wrap({
-        'dy_m50toinf'                       : [cfg.x.colors.blue,   r"$Z \to e^+e^-/\mu^+\mu^-$"], # because tautau is vetoed from gen-level
+        'dy_m50toinf'                       : [cfg.x.colors.blue,   r"$Z \to e^+e^-/\mu^+\mu^-/\tau^+\tau^-$"],
+        'dy_2e_or_2mu_m50toinf_nj'          : [cfg.x.colors.blue,   r"$Z \to e^+e^-/\mu^+\mu^-$"], # because tautau is vetoed from gen-level
         'dy_2tau_m50toinf_nj_LHEspin_minus' : [cfg.x.colors.yellow, r"$Z \to \tau_L^- \tau_R^+$"],
         'dy_2tau_m50toinf_nj_LHEspin_plus'  : [cfg.x.colors.red,    r"$Z \to \tau_R^- \tau_L^+$"],
         'dy_2tau'                           : [cfg.x.colors.yellow, r"$Z \to \tau^+\tau^-$"],
@@ -158,7 +159,8 @@ def stylize_processes(config: od.Config) -> None:
         'vvv'                               : [cfg.x.colors.orange, r"$W \to \ell\nu$"],
         'ewk'                               : [cfg.x.colors.olive,  r"$EWK-W/Z$"],
         'multiboson'                        : [cfg.x.colors.olive,  r"$VV(V)$"],
-        'higgs'                             : [cfg.x.colors.teal,   r"$(W/Z)h \to \tau^+\tau^-$"]
+        'higgs'                             : [cfg.x.colors.teal,   r"$(W/Z)h \to \tau^+\tau^-$"],
+        'qcd'                               : [cfg.x.colors.pink,   r"$QCD$"],
     })
     
 

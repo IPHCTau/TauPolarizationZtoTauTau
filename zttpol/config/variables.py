@@ -356,6 +356,14 @@ def add_zcand_features(cfg: od.Config) -> None:
         x_title=r"lepton pair visible mass",
     )
     cfg.add_variable(
+        name="zcand_invm_lt_250",
+        expression="zcand_invm",
+        null_value=EMPTY_FLOAT,
+        binning=(50, 0.0, 250.0),
+        unit="GeV",
+        x_title=r"lepton pair visible mass",
+    )
+    cfg.add_variable(
         name="z_invm",
         expression="zcand_invm",
         null_value=EMPTY_FLOAT,
@@ -441,6 +449,21 @@ def add_zcand_features(cfg: od.Config) -> None:
         binning=(50, 0.0, 200.0),
         unit="GeV",
         x_title=r"$m_{T} ~(\tau_{1}, \tau_{2}, E_{T})$",
+    )
+    cfg.add_variable(
+        name="mt_emu",
+        expression="mt_emu",
+        null_value=EMPTY_FLOAT,
+        binning=(50, 0.0, 200.0),
+        unit="GeV",
+        x_title=r"$m_{T} ~(e+\mu, E_{T})$",
+    )
+    cfg.add_variable(
+        name="dzeta",
+        expression="dzeta",
+        null_value=EMPTY_FLOAT,
+        binning=(100, -100.0, 100.0),
+        x_title=r"$D_{\zeta}$",
     )
     
     # omegas

@@ -68,8 +68,9 @@ def muon_selection(
     sorted_indices = ak.argsort(events.Muon.pt, axis=-1, ascending=False)
     muons = events.Muon[sorted_indices]
 
+    mupt_val = 15.0 if self.config_inst.x.channel == 'emu' else 20.0
     good_selections = {
-        "muon_pt_20"          : muons.pt > 20,
+        "muon_pt_15"          : muons.pt > mupt_val,
         "muon_eta_2p4"        : abs(muons.eta) < 2.4,
         "muon_mediumID"       : muons.mediumId == 1,
         "muon_dxy_0p045"      : abs(muons.dxy) < 0.045,
@@ -202,13 +203,15 @@ def electron_selection(
     mva_iso_wp90 = electrons.mvaIso_WP90
     mva_noniso_wp90 = electrons.mvaNoIso_WP90
 
+    pfreliso_val = 0.15 if self.config_inst.x.channel == 'emu' else 0.5
+    elept_val = 15.0 if self.config_inst.x.channel == 'emu' else 25.0
     good_selections = {
-        "electron_pt_25"          : electrons.pt > 25,
+        "electron_pt_15"          : electrons.pt > elept_val,
         "electron_eta_2p5"        : abs(electrons.eta) < 2.5,
         "electron_dxy_0p045"      : abs(electrons.dxy) < 0.045,
         "electron_dz_0p2"         : abs(electrons.dz) < 0.2,
         "electron_mva_iso_wp80"   : ((mva_iso_wp80 == 1) | (mva_iso_wp90 == 1)),
-        "electron_iso_0p5"        : electrons.pfRelIso03_all < 0.5,
+        "electron_iso_0p5"        : electrons.pfRelIso03_all < pfreliso_val,
     }
     single_veto_selections = {
         "electron_pt_10"          : electrons.pt > 10,

@@ -460,6 +460,33 @@ def cat_ss_noniso1_iso2_lowmt(self: Categorizer, events: ak.Array, **kwargs) -> 
     return events, ~events.is_os & ~events.is_iso_1 & events.is_iso_2 & events.is_low_mt
 
 
+## --- emu --->>>
+#
+#
+# A   : emu [os__noniso1]
+# B   : emu [ss__noniso1]
+# C   : emu [ss__iso1]
+# D   : emu [os__iso1]
+
+# A
+@categorizer(uses={"is_os", "is_iso_1"})
+def cat_os_noniso1(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    return events, events.is_os & ~events.is_iso_1
+
+# B
+@categorizer(uses={"is_os", "is_iso_1"})
+def cat_ss_noniso1(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    return events, ~events.is_os & ~events.is_iso_1
+
+# C
+@categorizer(uses={"is_os", "is_iso_1"})
+def cat_ss_iso1(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    return events, ~events.is_os & events.is_iso_1
+
+# D
+@categorizer(uses={"is_os", "is_iso_1"})
+def cat_os_iso1(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    return events, events.is_os & events.is_iso_1
 
 
 
