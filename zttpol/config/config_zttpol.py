@@ -36,7 +36,9 @@ ak = maybe_import("awkward")
 
 
 #thisdir = os.path.dirname(os.path.abspath(__file__))
-basecorrdir  = "/eos/project/i/iphctau/public/common/JSONPOG_Corrections"
+#basecorrdir  = "/eos/project/i/iphctau/public/common/JSONPOG_Corrections"
+basecorrdir  = "/safe/ui10_1/gsaha/ColumnflowAnalysisData/CorrectionsForTauPolarizationZtoTauTau/JSONPOG_Corrections"
+basicdir     = os.path.join(basecorrdir, "Basics")
 corrdir      = os.path.join(basecorrdir, "metadata_26052026")
 tooldir      = os.path.join(basecorrdir, "tools_26052026")
 
@@ -67,7 +69,7 @@ def add_config (ana: od.Analysis,
     
     # some validations
     assert run in {2,3}
-    assert year in {2016,2017,2018,2022,2023,2024,2025}
+    assert year in {2016,2017,2018,2022,2023,2024,2025,2026}
 
     year_postfix = ""
     if year == 2022:
@@ -139,6 +141,7 @@ def add_config (ana: od.Analysis,
         "dy_2tau_m50toinf_nj",
         "dy_2tau_m50toinf_nj_LHEspin_minus",
         "dy_2tau_m50toinf_nj_LHEspin_plus",
+        "dy_2e_or_2mu_m50toinf_nj",
         ## tt
         "tt",
         ## st
@@ -168,6 +171,8 @@ def add_config (ana: od.Analysis,
         "zh_htt",
         "wph_htt",
         "wmh_htt",
+        ## qcd
+        "qcd",
     ]
 
     for process_name in process_names:
@@ -1033,6 +1038,8 @@ def add_config (ana: od.Analysis,
     # tec config
     from columnflow.calibration.cms.tau import TECConfig
     corrector_kwargs = {
+        ("emu", 2)   : {"wp": cfg.x.tauIDWPs_config[cfg.x.deep_tau_tagger].vs_j['emu'],
+                        "wp_VSe": cfg.x.tauIDWPs_config[cfg.x.deep_tau_tagger].vs_e['emu']},        
         ("ee", 2)    : {"wp": cfg.x.tauIDWPs_config[cfg.x.deep_tau_tagger].vs_j['ee'],
                         "wp_VSe": cfg.x.tauIDWPs_config[cfg.x.deep_tau_tagger].vs_e['ee']},        
         ("mumu", 2)  : {"wp": cfg.x.tauIDWPs_config[cfg.x.deep_tau_tagger].vs_j['mumu'],
@@ -1085,13 +1092,15 @@ def add_config (ana: od.Analysis,
         
     # adding Goldenlumi JSON and Normtag JSON
     normtagjson = {
-        '2018' : ("/afs/cern.ch/user/l/lumipro/public/Normtags/normtag_PHYSICS.json", "v1"),
+        #'2018' : ("/afs/cern.ch/user/l/lumipro/public/Normtags/normtag_PHYSICS.json", "v1"),
+        '2018' : (f"{basicdir}/Run{run}_{year}/normtag_PHYSICS.json", "v1"),
         '2022' : ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_PHYSICS.json", "v1"),
         '2023' : ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_PHYSICS.json", "v1"),
         '2024' : ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_PHYSICS.json", "v1")
     }[f'{year}']
     goldenjson = {
-        '2018' : ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/Legacy_2018/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt","v1"),
+        #'2018' : ("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/Legacy_2018/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt","v1"),
+        '2018' : (f"{basicdir}/Run{run}_{year}/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt","v1"),
         '2022' : ("/eos/user/c/cmsdqm/www/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json","v1"),
         '2023' : ("/eos/user/c/cmsdqm/www/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json","v1"),
         '2024' : ("/eos/user/c/cmsdqm/www/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json""v1")
@@ -1695,7 +1704,7 @@ def add_config (ana: od.Analysis,
         )
     
     # --- >>> tau weight <<< --- #
-    if channel not in ['ee','mumu']:
+    if channel not in ['ee','mumu','emu']:
         tau_uncerts = [f'tau_dm{i}' for i in [0,1,10,11]]
         e_uncerts = [f'e_dm{i}' for i in [0,1,10,11]]
         m_uncerts = [f'mu_{region}' for region in ['0p0To0p4', '0p4To0p8', '0p8To1p2', '1p2To1p7', '1p7To2p3']]
@@ -1859,18 +1868,19 @@ def add_config (ana: od.Analysis,
 
 
     # --- >>> tau weight <<< --- #
-    cfg.x.trigger_legs = {
-        'ee'    : ['e'],
-        'etau'  : ['e','tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
-        'emu'   : ['emu'],
-        'mumu'  : ['mu'],
-        'mutau' : ['mu','tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
-        'tautau': ['tau_dm0','tau_dm1','tau_dm10','tau_dm11','jet'] if run == 3 else ['tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
-    }[channel]
-    for i, leg in enumerate(cfg.x.trigger_legs):
-        cfg.add_shift(name=f"trigger_{leg}_up", id=201 + 2 * i, type="shape")
-        cfg.add_shift(name=f"trigger_{leg}_down", id=202 + 2 * i, type="shape")
-        add_shift_aliases(cfg, f"trigger_{leg}", {"trigger_weight": f"trigger_weight_{leg}_{{direction}}"})
+    if channel not in {'emu'}:
+        cfg.x.trigger_legs = {
+            'ee'    : ['e'],
+            'etau'  : ['e','tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
+            #'emu'   : ['emu'],
+            'mumu'  : ['mu'],
+            'mutau' : ['mu','tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
+            'tautau': ['tau_dm0','tau_dm1','tau_dm10','tau_dm11','jet'] if run == 3 else ['tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
+        }[channel]
+        for i, leg in enumerate(cfg.x.trigger_legs):
+            cfg.add_shift(name=f"trigger_{leg}_up", id=201 + 2 * i, type="shape")
+            cfg.add_shift(name=f"trigger_{leg}_down", id=202 + 2 * i, type="shape")
+            add_shift_aliases(cfg, f"trigger_{leg}", {"trigger_weight": f"trigger_weight_{leg}_{{direction}}"})
 
     
 
@@ -1890,7 +1900,7 @@ def add_config (ana: od.Analysis,
     cfg.x.event_weights = DotDict({
         "normalization_weight"           : [],
         "normalized_pu_weight"           : get_shifts("minbias_xs"),
-        "trigger_weight"                 : get_shifts(*(f"trigger_{leg}" for leg in cfg.x.trigger_legs)),
+        #"trigger_weight"                 : get_shifts(*(f"trigger_{leg}" for leg in cfg.x.trigger_legs)),
         #"ff_weight"                             : [],
         ##"ff_cls_corr_weight"                    : [],
         ###"ff_ext_corr_weight"                    : [],
@@ -1912,6 +1922,11 @@ def add_config (ana: od.Analysis,
         cfg.x.event_weights["tau_id_weight"] = get_shifts(*(f"tau_{unc}" for unc in cfg.x.tau_unc_names))
         #cfg.x.event_weights["tau_trigger_weight"] = get_shifts("tau_trig")
 
+    logger.warning("for emu channel, trigger weights aren't applied yet")
+    if channel not in {'emu'}:
+        cfg.x.event_weights["trigger_weight"] = get_shifts(*(f"trigger_{leg}" for leg in cfg.x.trigger_legs))
+        
+        
     """
     cfg.x.event_mumu_weights = DotDict({
         "normalization_weight"                  : [],
@@ -2055,6 +2070,7 @@ def add_config (ana: od.Analysis,
                 
 
             else:
+                """
                 logger.warning(f"For {dataset_inst.name} dataset, use files stored locally in {local_file_path}")
                 basepath = local_file_path
                 logger.info(f"Location : {basepath}")
@@ -2068,6 +2084,52 @@ def add_config (ana: od.Analysis,
                     lfn_base.child(basename, type="f").path
                     for basename in lfn_base.listdir(pattern="*.root")
                 ]
+                """
+                logger.warning(
+                    f"For {dataset_inst.name}, use the private sample stored at T2_FR_IPHC",
+                )
+
+                #iphc_base_path = (
+                #    "/store/user/alebihan/"
+                #    "taupola_noskim_prod_63M/"
+                #    "Run2_2018"
+                #)
+                iphc_base_path = (
+                    "/store/user/alebihan/"
+                    "taupola_noskim/"
+                    "Run2_2018"
+                )
+
+                dataset_path = f"{iphc_base_path}/{dataset_key.lstrip('/')}"
+
+                logger.info(f"Dataset key: {dataset_key}")
+                logger.info(f"Location: {dataset_path}")
+
+                lfn_base = law.wlcg.WLCGDirectoryTarget(
+                    dataset_path,
+                    fs=global_redirector_name,
+                )
+
+                logger.info(f"LFN base directory: {lfn_base}")
+
+                # Find ROOT files directly in the dataset directory.
+                lfns = [
+                    "/" + lfn_base.child(basename, type="f").path.lstrip("/")
+                    for basename in lfn_base.listdir(pattern="*.root")
+                ]
+
+                # Also check numbered subdirectories such as 0000, 0001, etc.
+                lfn_num_bases = [
+                    lfn_base.child(dirname, type="d")
+                    for dirname in lfn_base.listdir()
+                    if dirname.isnumeric()
+                ]
+                
+                lfns.extend(
+                    "/" + lfn_num_base.child(basename, type="f").path.lstrip("/")
+                    for lfn_num_base in lfn_num_bases
+                    for basename in lfn_num_base.listdir(pattern="*.root")
+                )
                 
             return sorted(lfns)
 
@@ -2079,9 +2141,9 @@ def add_config (ana: od.Analysis,
         cfg.x.get_dataset_lfns_sandbox = dev_sandbox("bash::$CF_BASE/sandboxes/cf.sh")
         # define custom remote fs's to look at
         #cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: redirector_name
-        #cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: [global_redirector_name]
-        cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: [local_redirector_name,
-                                                                  global_redirector_name]
+        cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: [global_redirector_name]
+        #cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: [global_redirector_name,
+        #                                                          local_redirector_name]
         
     #---------------------------------------------------------------------------------------------#
     # Add categories described in categorization.py
@@ -2175,6 +2237,7 @@ def add_config (ana: od.Analysis,
     #cfg.x.save_qcd = True
     #from zttpol.config.hist_hooks import add_hist_hooks
     #add_hist_hooks(cfg)
+
 
     # fastMTT helper
     cfg.x.enable_fastMTT = False
