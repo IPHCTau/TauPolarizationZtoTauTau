@@ -114,42 +114,63 @@ def add_triggers_2018(config: od.Config, postfix: str) -> None:
     Adds all triggers to a *config*. For the conversion from filter names to trigger bits, see
     https://github.com/cms-sw/cmssw/blob/master/PhysicsTools/NanoAOD/python/triggerObjects_cff.py.
     """
-    config.x.triggers = od.UniqueObjectIndex(Trigger, [
-        # ===>>> single electron
+    config.x.triggers = od.UniqueObjectIndex(Trigger,[
+        # ===>>> cross muon-electron
         Trigger(
-            name="HLT_Ele32_WPTight_Gsf",
-            id=11001,
+            name="HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ",
+            id=13111,
             legs=[
                 TriggerLeg(
-                    pdg_id=11,
-                    min_pt=34.0,
-                    min_pt_online=32.0,
-                    max_abseta=2.1,
-                    max_abseta_online=2.1,
+                    pdg_id=13,
+                    min_pt=24.0,
+                    min_pt_online=23.0,
+                    max_abseta=2.4,
+                    max_abseta_online=2.5,
                     # filter names:
-                    # hltEle32WPTightGsfTrackIsoFilter
-                    trigger_bits=2**1,
+                    # 
+                    trigger_bits=None,
+                ),
+                TriggerLeg(
+                    pdg_id=11,
+                    min_pt=13.0,
+                    min_pt_online=12.0,
+                    max_abseta=2.4,
+                    max_abseta_online=2.5,
+                    # filter names:
+                    # 
+                    trigger_bits=None,
                 ),
             ],
-            #applies_to_dataset=(lambda dataset_inst: dataset_inst.is_mc or dataset_inst.x.era >= "D"),
-            tags={"single_trigger", "single_e", "channel_e_e"},
+            tags={"cross_trigger", "cross_e_mu", "channel_e_mu"},
         ),
+
+        # ===>>> cross electron-muon
         Trigger(
-            name="HLT_Ele35_WPTight_Gsf",
-            id=11002,
+            name="HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ",
+            id=11131,
             legs=[
                 TriggerLeg(
-                    pdg_id=11,
-                    min_pt=37.0,
-                    min_pt_online=35.0,
-                    max_abseta=2.1,
-                    max_abseta_online=2.1,
+                    pdg_id=13,
+                    min_pt=9.0,
+                    min_pt_online=8.0,
+                    max_abseta=2.4,
+                    max_abseta_online=2.5,
                     # filter names:
-                    # hltEle35noerWPTightGsfTrackIsoFilter
-                    trigger_bits=2**1,
+                    # 
+                    trigger_bits=None,
+                ),
+                TriggerLeg(
+                    pdg_id=11,
+                    min_pt=24.0,
+                    min_pt_online=23.0,
+                    max_abseta=2.4,
+                    max_abseta_online=2.5,
+                    # filter names:
+                    # 
+                    trigger_bits=None,
                 ),
             ],
-            tags={"single_trigger", "single_e", "channel_e_e"},
+            tags={"cross_trigger", "cross_e_mu", "channel_e_mu"},
         ),
     ])
 

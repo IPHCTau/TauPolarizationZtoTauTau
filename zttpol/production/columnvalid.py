@@ -89,11 +89,8 @@ def make_column_valid_init(self: Producer, **kwargs) -> None:
 
     self.validity_columns = {
         "PuppiMET.{covXX,covXY,covYY,significance}",
+        "Tau.{IPx,IPy,IPz,ipLengthSig,rawUParTVSmu,rawUParTVSjet,rawUParTVSe,rawPNetVSmu,rawPNetVSjet,rawPNetVSe,qConfUParT,probDM2UParT,probDM2PNet,probDM1UParT,probDM1PNet,probDM11UParT,probDM11PNet,probDM10UParT,probDM10PNet,probDM0UParT,probDM0PNet}",
     }
-    if self.config_inst.x.channel in {'emu','mumu','ee'}:
-        self.validity_columns |= {
-            "Tau.{IPx,IPy,IPz,ipLengthSig,rawUParTVSmu,rawUParTVSjet,rawUParTVSe,rawPNetVSmu,rawPNetVSjet,rawPNetVSe,qConfUParT,probDM2UParT,probDM2PNet,probDM1UParT,probDM1PNet,probDM11UParT,probDM11PNet,probDM10UParT,probDM10PNet,probDM0UParT,probDM0PNet}",
-        }
         
         
     self.uses |= self.validity_columns

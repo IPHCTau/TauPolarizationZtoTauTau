@@ -6,6 +6,7 @@ Configuration of the CPinHToTauTau analysis.
 import law
 import order as od
 from scinum import Number
+from columnflow.util import DotDict
 
 # ------------------------ #
 # The main analysis object #
@@ -39,6 +40,13 @@ ana.x.cmssw_sandboxes = [
 # (used in wrapper_factory)
 ana.x.config_groups = {}
 
+
+ana.x.hist_hooks = DotDict()
+# qcd estimation
+from zttpol.hist_hooks.qcd import add_hooks as add_qcd_hooks
+add_qcd_hooks(ana)
+
+
 # ------------- #
 # setup configs #
 # ------------- #
@@ -48,5 +56,5 @@ build_analysis(analysis=analysis_zttpol_mutau,
                era=2018,
                postfix="",
                channel="mutau",
-               islimited=True,
-               isfull=False)
+               islimited=False,
+               isfull=True)

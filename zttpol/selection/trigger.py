@@ -60,6 +60,7 @@ def trigger_selection(
         is_cross_e   = trigger.has_tag("cross_e_tau")
         is_single_mu = trigger.has_tag("single_mu")
         is_cross_mu  = trigger.has_tag("cross_mu_tau")
+        is_cross_e_mu  = trigger.has_tag("cross_e_mu")
         is_cross_tau = trigger.has_tag("cross_tau_tau")
         is_cross_tau_jet = trigger.has_tag("cross_tau_tau_jet")
 
@@ -72,6 +73,8 @@ def trigger_selection(
             trigger_type_temp =	ak.Array(["single_mu"])
         elif is_cross_mu:
             trigger_type_temp = ak.Array(["cross_mu_tau"])
+        elif is_cross_e_mu:
+            trigger_type_temp = ak.Array(["cross_e_mu"])
         elif is_cross_tau:
             trigger_type_temp = ak.Array(["cross_tau_tau"])
         elif is_cross_tau_jet:

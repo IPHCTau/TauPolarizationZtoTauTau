@@ -44,6 +44,8 @@ from zttpol.util import (
     IF_DATASET_IS_SIGNAL,
     IF_DATASET_IS_TT,
     transverse_mass,
+    transverse_mass_emu, 
+    D_zeta,
     IF_DATASET_IS_DY_TAUTAU
 )
 
@@ -69,7 +71,7 @@ logger = law.logger.get_logger(__name__)
 
 @producer(
     uses={
-        "zcand.*",
+        "zcand.{pt,eta,phi,mass}",
         "Jet.{pt,eta,phi,mass}",
         "PuppiMET.{pt,phi}",
     },
@@ -82,7 +84,8 @@ logger = law.logger.get_logger(__name__)
         "met_var_qcd_z1", "met_var_qcd_z2",
         "hT",
         "pt_tt", "pt_vis",
-        "mt_1", "mt_2", "mt_lep", "mt_tot",
+        "mt_1", "mt_2", "mt_lep", "mt_tot", "mt_emu",
+        "dzeta",
     },
 )
 def zcand_features(
@@ -135,11 +138,16 @@ def zcand_features(
     mt_2 = transverse_mass(zcand2, met)
     mt_lep = transverse_mass(zcand1, zcand2)
     mt_tot = np.sqrt(mt_1**2 + mt_2**2 + mt_lep**2)
+    mt_emu = transverse_mass_emu(zcand1, zcand2, met)
     events = set_ak_column_f32(events, "mt_1", mt_1)
     events = set_ak_column_f32(events, "mt_2", mt_2)
     events = set_ak_column_f32(events, "mt_lep", mt_lep)
     events = set_ak_column_f32(events, "mt_tot", mt_tot)
-        
+    events = set_ak_column_f32(events, "mt_emu", mt_emu)
+
+    # D_zeta
+    dzeta = D_zeta(zcand1, zcand2, met)
+    events = set_ak_column_f32(events, "dzeta", dzeta)
     
     return events
 
@@ -163,6 +171,7 @@ def zcand_features(
         IF_DATASET_HAS_LHE_WEIGHTS(normalized_murmuf_weight),
         IF_MC(normalized_pu_weight,
               normalized_ps_weight),
+        "process_id",
     },
     produces={
         normalization_weights,
@@ -180,10 +189,13 @@ def zcand_features(
         IF_DATASET_HAS_LHE_WEIGHTS(normalized_murmuf_weight),        
         IF_MC(normalized_pu_weight,
               normalized_ps_weight),
+        "process_id",
     },
 )
 def produce_base(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 
+    #from IPython import embed; embed()
+    
     #events = self[make_column_valid](events, **kwargs)
     events = self[attach_coffea_behavior](events, **kwargs)
 
@@ -213,6 +225,29 @@ def produce_base(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         #    events = self[zpt_reweight_v2](events, **kwargs)
 
         #processes = self.dataset_inst.processes.names()
+
+
+
+        # assign special process_ids, only for DY-inclusive samples
+        # for mumu/ee channel,
+        # assign
+        #   dy_m50toinf_lep : ee/mm (id 51099)
+        #   dy_m50toinf_tau : tt    (id 51098)
+        # for emu/etau/mutau/tautau channel,
+        # assign
+        #   dy_m50toinf_lep : ee/mm (id 51099)
+        #from IPython import embed; embed()
+        
+        if self.dataset_inst.has_tag("is_dy_lep"):
+            if self.dataset_inst.has_tag("drop_tautau_from_dy_incl"):
+                _proc = self.config_inst.get_process("dy_2e_or_2mu_m50toinf_nj")
+                old_proc_id = int(events.process_id[0])
+                logger.info(f"Assigning DY→ee/μμ events to process {_proc.name} with {_proc.id}, from ID {old_proc_id}")
+                proc_id = ak.values_astype(ak.where(events.process_id > 0, _proc.id, events.process_id), np.int32)
+                events = set_ak_column(events, "process_id", proc_id)
+                #else:
+                #todo
+        
         if self.dataset_inst.has_tag("is_dy_tautau"):
             events = self[assign_helicity](events)
             events = self[split_dy](events,**kwargs)
@@ -223,6 +258,8 @@ def produce_base(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         #else:
         #    logger.warning(f"No top pt reweihting for <{self.dataset_inst.name}> dataset")
 
+        
+        
     #from IPython import embed; embed()
             
     return events

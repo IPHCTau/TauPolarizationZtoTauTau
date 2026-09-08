@@ -143,7 +143,7 @@ def build_abcd_masks(
     is_iso_1_dummy = z1.rawIdx < 0
     is_iso_1 = ak.where(events.channel_id == ch_tautau.id,
                         ak.values_astype(z1.isolation, np.int32) >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_j[vs_jet_wp(ch_tautau.name)],
-                        ak.where(((events.channel_id == ch_mutau.id) | (events.channel_id == ch_mumu.id)),
+                        ak.where(((events.channel_id == ch_mutau.id) | (events.channel_id == ch_mumu.id) | (events.channel_id == ch_emu.id)),
                                  z1.isolation <= 0.15,
                                  ak.where(((events.channel_id == ch_etau.id) | (events.channel_id == ch_ee.id)),
                                           z1.isolation <= 0.3,
@@ -184,7 +184,7 @@ def build_abcd_masks(
     if self.dataset_inst.is_mc:
         is_real_1 = ak.where(((events.channel_id == ch_etau.id) | (events.channel_id == ch_ee.id)),
                              ((z1.genPartFlav == 1) | (z1.genPartFlav == 15) | (z1.genPartFlav == 22)), # true ele
-                             ak.where(((events.channel_id == ch_mutau.id) | (events.channel_id == ch_mumu.id)),
+                             ak.where(((events.channel_id == ch_mutau.id) | (events.channel_id == ch_mumu.id) | (events.channel_id == ch_emu.id)),
                                       ((z1.genPartFlav == 1) | (z1.genPartFlav == 15)), # true mu
                                       ak.where(events.channel_id == ch_tautau.id,
                                                ((z1.genPartFlav > 0) & (z1.genPartFlav < 6)), # true tau
@@ -205,14 +205,22 @@ def build_abcd_masks(
     is_real_2 = is_fake_2 = events.event >= 0    
 
     if self.dataset_inst.is_mc:
-        is_real_2 = (z2.genPartFlav > 0) & (z2.genPartFlav < 6)
-        if self.dataset_inst.has_tag("is_w") or self.dataset_inst.has_tag("no_lhe_weights") or self.dataset_inst.has_tag("st"):
+        #is_real_2 = (z2.genPartFlav > 0) & (z2.genPartFlav < 6)
+        is_real_2 = ak.where(((events.channel_id == ch_tautau.id) | (events.channel_id == ch_mutau.id) | (events.channel_id == ch_etau.id)),
+                             ((z2.genPartFlav > 0) & (z2.genPartFlav < 6)), # true tau
+                             ak.where(events.channel_id == ch_emu.id,
+                                      ((z2.genPartFlav == 1) | (z2.genPartFlav == 15) | (z2.genPartFlav == 22)), # true ele
+                                      is_iso_1_dummy))
+        
+        if self.dataset_inst.has_tag("is_w") \
+           or self.dataset_inst.has_tag("no_lhe_weights") \
+           or self.dataset_inst.has_tag("st") \
+           or self.dataset_inst.has_tag("tt") \
+           or (self.dataset_inst.has_tag("is_dy_lep") and self.dataset_inst.has_tag("drop_tautau_from_dy_incl")) :
             # temporary, fake contribution from WJets Simulation, not data driven
-            is_real_2 = ak.where(events.channel_id == ch_etau.id,
+            is_real_2 = ak.where(((events.channel_id == ch_etau.id) | (events.channel_id == ch_mutau.id)),
                                  z2.genPartFlav >= 0,
-                                 ak.where(events.channel_id == ch_mutau.id,
-                                          z2.genPartFlav >= 0,
-                                          is_real_2))
+                                 is_real_2)
         is_real_2 = ak.fill_none(ak.any(is_real_2, axis=1), False)
         
         is_fake_2 = ((z2.genPartFlav == 0) | (z2.genPartFlav == 6))

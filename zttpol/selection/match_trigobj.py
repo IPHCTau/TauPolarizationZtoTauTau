@@ -14,6 +14,83 @@ ak = maybe_import("awkward")
 # semilep,fullhad : both legs                           #
 # ----------------------------------------------------- #
 
+def match_trigobjs_dilep_diff(
+        leps_pair: ak.Array,
+        trigger_results: SelectionResult,
+        **kwargs,
+) -> tuple[ak.Array, ak.Array]:
+
+    # extract the trigger names, types & others from trigger_results.x (aux)
+    trigger_ids           = trigger_results.x.trigger_ids
+    trigger_types         = trigger_results.x.trigger_types
+    leg1_minpt            = trigger_results.x.leg1_minpt
+    leg2_minpt            = trigger_results.x.leg2_minpt
+    leg1_maxeta           = trigger_results.x.leg1_maxeta
+    leg2_maxeta           = trigger_results.x.leg2_maxeta
+    leg1_matched_trigobjs = trigger_results.x.leg1_matched_trigobjs
+    leg2_matched_trigobjs = trigger_results.x.leg2_matched_trigobjs
+
+    has_emu_triggers = trigger_types == "cross_e_mu"
+    leps_pair = filter_by_triggers(leps_pair, has_emu_triggers)
+
+    mus, eles = ak.unzip(leps_pair)
+
+    # Event level masks
+    # if events have emu
+    has_emu_pairs = ak.fill_none(ak.num(mus, axis=1) > 0 , False)
+
+    mask_has_emu_triggers_and_has_emu = has_emu_triggers & has_emu_pairs
+
+    # filtering out the info based on the masks defined just above
+
+    emu_trigger_types                = trigger_types[mask_has_emu_triggers_and_has_emu]
+    emu_trigger_ids                  = trigger_ids[mask_has_emu_triggers_and_has_emu]
+    cross_emu_leg_1_minpt            = leg1_minpt[mask_has_emu_triggers_and_has_emu]
+    cross_emu_leg_2_minpt            = leg2_minpt[mask_has_emu_triggers_and_has_emu]
+    cross_emu_leg_1_maxeta           = leg1_maxeta[mask_has_emu_triggers_and_has_emu]
+    cross_emu_leg_2_maxeta           = leg2_maxeta[mask_has_emu_triggers_and_has_emu]
+    cross_emu_leg_1_matched_trigobjs = leg1_matched_trigobjs[mask_has_emu_triggers_and_has_emu]
+    cross_emu_leg_2_matched_trigobjs = leg2_matched_trigobjs[mask_has_emu_triggers_and_has_emu]
+
+    # to convert the masks to event level
+    mask_has_emu_triggers_and_has_emu_evt_level  = ak.fill_none(ak.any(mask_has_emu_triggers_and_has_emu, axis=1), False)
+
+    # dummy bool array
+    trigobj_matched_mask_dummy = ak.from_regular((trigger_ids > 0)[:,:0][:,None])
+
+    cross_emu_trigobj_matched_mask_leg1 = trigger_object_matching_deep(mus,
+                                                                      cross_emu_leg_1_matched_trigobjs,
+                                                                      cross_emu_leg_1_minpt,
+                                                                      cross_emu_leg_1_maxeta,
+                                                                      True)
+
+    cross_emu_trigobj_matched_mask_leg2 = trigger_object_matching_deep(eles,
+                                                                      cross_emu_leg_2_matched_trigobjs,
+                                                                      cross_emu_leg_2_minpt,
+                                                                      cross_emu_leg_2_maxeta,
+                                                                      True)
+
+    cross_emu_trigobj_matched_mask = (cross_emu_trigobj_matched_mask_leg1 & cross_emu_trigobj_matched_mask_leg2)
+
+    cross_emu_trigobj_matched_mask_evt_level = ak.fill_none(ak.firsts(ak.any(cross_emu_trigobj_matched_mask, axis=1), axis=1), False)
+
+    emu_trigobj_matched_mask = mask_has_emu_triggers_and_has_emu_evt_level & cross_emu_trigobj_matched_mask_evt_level
+    emu_trigobj_matched_mask = ak.singletons(emu_trigobj_matched_mask)
+
+    new_mus = mus[emu_trigobj_matched_mask]
+    new_eles = eles[emu_trigobj_matched_mask]
+
+    ids = ak.values_astype(emu_trigger_ids, 'int64')
+    leps_pair = ak.zip([new_mus, new_eles])      
+    #from IPython import embed; embed()
+
+    #ids_dummy = ak.from_regular((trigger_ids > 0)[:,:0])
+    #ids = ak.where(mask_has_tau_triggers_and_has_tau_pairs_evt_level, ids, ids_dummy)
+
+    return leps_pair, ids, emu_trigger_types
+
+
+
 def match_trigobjs_dilep(
         leps_pair: ak.Array,
         trigger_results: SelectionResult,

@@ -241,7 +241,7 @@ def add_triggers_2018(config: od.Config, postfix: str) -> None:
                 ),
             ],
             # the non-HPS path existed only for data
-            applies_to_dataset=(lambda dataset_inst: dataset_inst.is_data and dataset_inst.x.era <= "B"),
+            applies_to_dataset=(lambda dataset_inst: dataset_inst.is_data and dataset_inst.x.era < "B"),
             tags={"cross_trigger", "cross_mu_tau", "channel_mu_tau"},
         ),
         # HLT_IsoMu20_eta2p1_LooseChargedIsoPFTauHPS27_eta2p1_TightID_CrossL1
@@ -277,7 +277,7 @@ def add_triggers_2018(config: od.Config, postfix: str) -> None:
                     trigger_bits=2**9 + 2**10,
                 ),
             ],
-            applies_to_dataset=(lambda dataset_inst: dataset_inst.is_mc or dataset_inst.x.era >= "B"), # why "B"? should be for MC only, no?
+            applies_to_dataset=(lambda dataset_inst: dataset_inst.is_mc or dataset_inst.x.era > "B"), # why "B"? should be for MC only, no?
             tags={"cross_trigger", "cross_mu_tau", "channel_mu_tau"},
         ),
     ])
