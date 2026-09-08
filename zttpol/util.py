@@ -210,6 +210,59 @@ def transverse_mass(lepton: ak.Array, met: ak.Array) -> ak.Array:
     mt = np.sqrt(2 * lepton.pt * met.pt * (1 - np.cos(dphi_lep_met)))
     return mt
 
+def transverse_mass_emu(lep1: ak.Array, lep2: ak.Array, met: ak.Array) -> ak.Array:
+    px_1 = lep1.pt * np.cos(lep1.phi)
+    py_1 = lep1.pt * np.sin(lep1.phi)
+    
+    px_2 = lep2.pt * np.cos(lep2.phi)
+    py_2 = lep2.pt * np.sin(lep2.phi)
+    
+    lep_sum = ak.zip({
+        'x': ak.where(px_1+px_2 == np.nan, -9999.0, px_1+px_2),
+        'y': ak.where(py_1+py_2 == np.nan, -9999.0, py_1+py_2),
+    }, with_name="TwoVector", behavior=coffea.nanoevents.methods.vector.behavior)
+
+    dphi_lep_met = lep_sum.delta_phi(met)
+    mt = np.sqrt(2 * lep_sum.pt * met.pt * (1 - np.cos(dphi_lep_met)))
+    
+    return mt
+
+def D_zeta(t1: ak.Array, t2: ak.Array, met: ak.Array) -> ak.Array:
+    px_1 = t1.pt * np.cos(t1.phi)
+    py_1 = t1.pt * np.sin(t1.phi)
+    
+    px_2 = t2.pt * np.cos(t2.phi)
+    py_2 = t2.pt * np.sin(t2.phi)
+
+    px_met = met.pt * np.cos(met.phi)
+    py_met = met.pt * np.sin(met.phi)
+
+    leg1 = ak.zip({
+        'x': ak.where(px_1 == np.nan, -9999.0, px_1),
+        'y': ak.where(py_1 == np.nan, -9999.0, py_1),
+        'z': 0.,
+    }, with_name="ThreeVector", behavior=coffea.nanoevents.methods.vector.behavior)
+
+    leg2 = ak.zip({
+        'x': ak.where(px_2 == np.nan, -9999.0, px_2),
+        'y': ak.where(py_2 == np.nan, -9999.0, py_2),
+        'z': 0.,
+    }, with_name="ThreeVector", behavior=coffea.nanoevents.methods.vector.behavior)
+
+    met_cart = ak.zip({
+        'x': ak.where(px_met == np.nan, -9999.0, px_met),
+        'y': ak.where(py_met == np.nan, -9999.0, py_met),
+        'z': 0.,
+    }, with_name="ThreeVector", behavior=coffea.nanoevents.methods.vector.behavior)
+
+    zetaAxis  = (leg1.unit+leg2.unit).unit # bisector of visible tau candidates
+    pzetavis  = leg1.dot(zetaAxis) + leg2.dot(zetaAxis) # bisector of visible ditau momentum onto zeta axis
+    pzetamiss = met_cart.dot(zetaAxis) # projection of MET onto zeta axis
+
+    dzeta = pzetamiss - 0.85*pzetavis
+
+    return dzeta
+
 
 #def trigger_object_matching(
 #    vectors1: ak.Array,
