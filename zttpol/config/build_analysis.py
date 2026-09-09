@@ -9,6 +9,15 @@ from cmsdb.campaigns.run2_2018_taupol_nano_v15 import campaign_run2_2018_taupol_
 #from cmsdb.campaigns.run3_2023_preBPix_nano_cp_tau_v14_nanoprod_2024_v2 import campaign_run3_2023_preBPix_nano_cp_tau_v14_nanoprod_2024_v2
 #from cmsdb.campaigns.run3_2023_postBPix_nano_cp_tau_v14_nanoprod_2024_v2 import campaign_run3_2023_postBPix_nano_cp_tau_v14_nanoprod_2024_v2
 
+def get_cfg_type_from_cmd(luigi_parser, law_parser):
+    parsed_args, _  = law_parser.parse_known_args(luigi_parser.cmdline_args)
+    cfg_name_in_cmd = parsed_args.config
+    islimited = True if cfg_name_in_cmd.endswith('_limited') else False
+    isfull = False if islimited else True
+    return islimited, isfull
+
+
+
 def build_analysis(analysis=None,
                    era=None,
                    postfix=None,

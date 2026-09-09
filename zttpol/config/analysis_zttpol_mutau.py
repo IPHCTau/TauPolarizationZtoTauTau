@@ -3,6 +3,7 @@
 """
 Configuration of the CPinHToTauTau analysis.
 """
+import luigi
 import law
 import order as od
 from scinum import Number
@@ -52,9 +53,13 @@ add_qcd_hooks(ana)
 # ------------- #
 
 from zttpol.config.build_analysis import *
+
+islimited, isfull = get_cfg_type_from_cmd(luigi.cmdline_parser.CmdlineParser.get_instance(),
+                                          law.parser.root_task_parser())
+
 build_analysis(analysis=analysis_zttpol_mutau,
                era=2018,
                postfix="",
                channel="mutau",
-               islimited=False,
-               isfull=True)
+               islimited=islimited,
+               isfull=isfull)
