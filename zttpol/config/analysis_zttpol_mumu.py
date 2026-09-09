@@ -3,6 +3,7 @@
 """
 Configuration of the CPinHToTauTau analysis.
 """
+import luigi
 import law
 import order as od
 from scinum import Number
@@ -44,9 +45,13 @@ ana.x.config_groups = {}
 # ------------- #
 
 from zttpol.config.build_analysis import *
+
+islimited, isfull = get_cfg_type_from_cmd(luigi.cmdline_parser.CmdlineParser.get_instance(),
+                                          law.parser.root_task_parser())
+
 build_analysis(analysis=analysis_zttpol_mumu,
                era=2018,
                postfix="",
                channel="mumu",
-               islimited=False,
-               isfull=True)
+               islimited=islimited,
+               isfull=isfull)

@@ -3,6 +3,7 @@
 """
 Configuration of the CPinHToTauTau analysis.
 """
+import luigi
 import law
 import order as od
 from scinum import Number
@@ -46,9 +47,13 @@ logger = law.logger.get_logger(__name__)
 # ------------- #
 
 from zttpol.config.build_analysis import *
+
+islimited, isfull = get_cfg_type_from_cmd(luigi.cmdline_parser.CmdlineParser.get_instance(),
+                                          law.parser.root_task_parser())
+
 build_analysis(analysis=analysis_zttpol_emu,
                era=2018,
                postfix="",
                channel="emu",
-               islimited=True,
-               isfull=False)
+               islimited=islimited,
+               isfull=isfull)
