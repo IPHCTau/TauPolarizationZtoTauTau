@@ -36,12 +36,14 @@ class Likelihood:
     def __init__(self,
                  enable_MET = True,
                  enable_mass = True,
-                 enable_BW = True,
+                 enable_BW = False,
                  enable_px = False,
                  enable_py = False,
                  enable_window=False,
                  constrain_window=[123.0, 127.0],
-                 enable_gauss=False):
+                 enable_gauss=True,
+                 massX=None,
+                 widthX=None):
 
         #METinputs
         self.recoMET = np.array([0.0, 0.0, 0.0, 0.0])
@@ -86,6 +88,9 @@ class Likelihood:
 
         self.window = constrain_window
 
+        self.massX = massX
+        self.widthX = widthX
+        
         return
 
     def setLeptonInputs(self, aLeg1P4, aLeg2P4, aLeg1DecayType, aLeg2DecayType, aLeg1DecayMode, aLeg2DecayMode):
@@ -160,8 +165,8 @@ class Likelihood:
 
     
     def Gauss(self, invariant_mass):
-        Higgs_mass = 125
-        Higgs_gamma = Higgs_mass*0.01 #value set in original SVfit paper, however we will play with it yet
+        Higgs_mass = self.massX
+        Higgs_gamma = self.widthX #value set in original SVfit paper, however we will play with it yet
 
         Higgs_gauss_factor = np.exp(-0.5*(invariant_mass - Higgs_mass)**2/(Higgs_gamma**2))
         return Higgs_gauss_factor    
@@ -315,9 +320,18 @@ class FastMTT(Likelihood):
     def __init__(self,
                  enable_BW = True,
                  enable_window = False,
-                 calculate_uncertainties = False):
+                 enable_gauss = False,
+                 calculate_uncertainties = False,
+                 massX = None,
+                 widthX = None,
+                 constrain_window = [80.0,100.0]):
+
         self.myLikelihood = Likelihood(enable_BW = enable_BW,
-                                       enable_window = enable_window)
+                                       enable_gauss = enable_gauss,
+                                       enable_window = enable_window,
+                                       constrain_window = constrain_window,
+                                       massX = massX,
+                                       widthX = widthX)
         self.BestLikelihood = 0.0
         self.BestX = np.array([0.0, 0.0])
         self.bestP4 = 0.0
