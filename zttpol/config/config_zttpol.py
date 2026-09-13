@@ -2089,16 +2089,16 @@ def add_config (ana: od.Analysis,
                     f"For {dataset_inst.name}, use the private sample stored at T2_FR_IPHC",
                 )
 
-                #iphc_base_path = (
-                #    "/store/user/alebihan/"
-                #    "taupola_noskim_prod_63M/"
-                #    "Run2_2018"
-                #)
                 iphc_base_path = (
                     "/store/user/alebihan/"
-                    "taupola_noskim/"
+                    "taupola_noskim_prod_63M/"
                     "Run2_2018"
                 )
+                #iphc_base_path = (
+                #    "/store/user/alebihan/"
+                #    "taupola_noskim/"
+                #    "Run2_2018"
+                #)
 
                 dataset_path = f"{iphc_base_path}/{dataset_key.lstrip('/')}"
 
