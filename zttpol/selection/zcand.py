@@ -51,7 +51,7 @@ def get_energy_split(h, pions, pizeros):
         "Tau.*",
     },
     produces={
-        "zcand.{pt,eta,phi,mass,charge,rawIdx,decayMode,IPsig,isolation,genPartFlav,SVx,SVy,SVz,IPx,IPy,IPz}",
+        "zcand.{pt,eta,phi,mass,charge,rawIdx,decayMode,IPsig,isolation,genPartFlav,SVx,SVy,SVz,IPx,IPy,IPz,SVcovxx,SVcovxy,SVcovxz,SVcovyy,SVcovyz,SVcovzz}",
     },
     exposed=False,
 )
@@ -83,6 +83,12 @@ def selzcand(
                                 "SVx"           : "float64",
                                 "SVy"           : "float64",
                                 "SVz"           : "float64",
+                                "SVcovxx"       : "float64",
+                                "SVcovxy"       : "float64",
+                                "SVcovxz"       : "float64",
+                                "SVcovyy"       : "float64",
+                                "SVcovyz"       : "float64",
+                                "SVcovzz"       : "float64",
                                 }
                                )
 
