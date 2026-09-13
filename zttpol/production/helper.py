@@ -191,6 +191,7 @@ def clean_rearranged_dict(p4dict, keylist=[], debug=False):
             max_count_safe = ak.max(ak.num(masked_val, axis=1))
             min_count_safe = ak.min(ak.num(masked_val, axis=1))
             #print(max_count_safe, min_count_safe)
+            #from IPython import embed; embed()
             if max_count_safe == min_count_safe:
                 masked_val = ak.drop_none(masked_val)
             else:
@@ -215,9 +216,10 @@ def getlistofobservables():
 
 def check_nan(var, val):
     n_nan = ak.sum(np.isnan(val))
+    val = ak.nan_to_num(val, -999.9)
+    n_tot = ak.sum(np.abs(val) >= 0)
+
     if n_nan > 0:
-        val = ak.nan_to_num(val, -999.9)
-        n_tot = ak.sum(np.abs(val) >= 0)
         logger.warning(f"{var} --> {n_nan} out of {n_tot} is NaN")
         
     n_none = ak.sum(ak.is_none(val, axis=-1))
