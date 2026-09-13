@@ -34,7 +34,9 @@ coffea = maybe_import("coffea")
     produces={
         f"Muon.{var}" for var in [
             "rawIdx", "decayMode", "IPsig", "isolation",
-            "decayModeHPS", "SVx", "SVy", "SVz",
+            "decayModeHPS",
+            "SVx", "SVy", "SVz",
+            "SVcovxx", "SVcovxy", "SVcovxz", "SVcovyy", "SVcovyz", "SVcovzz",
         ]
     },
     exposed=False,
@@ -63,6 +65,13 @@ def muon_selection(
     events = set_ak_column(events, "Muon.SVx", 0.0)
     events = set_ak_column(events, "Muon.SVy", 0.0)
     events = set_ak_column(events, "Muon.SVz", 0.0)
+
+    events = set_ak_column(events, "Muon.SVcovxx", 0.0)
+    events = set_ak_column(events, "Muon.SVcovxy", 0.0)
+    events = set_ak_column(events, "Muon.SVcovxz", 0.0)
+    events = set_ak_column(events, "Muon.SVcovyy", 0.0)
+    events = set_ak_column(events, "Muon.SVcovyz", 0.0)
+    events = set_ak_column(events, "Muon.SVcovzz", 0.0)
     
     # pt sorted indices for converting masks to indices
     sorted_indices = ak.argsort(events.Muon.pt, axis=-1, ascending=False)
@@ -143,7 +152,7 @@ def muon_selection(
             },
         },
         aux={
-            "muon_pre_selection": good_selection_steps,
+            "muon_good_selection": good_selection_steps,
             "muon_single_veto_selection": single_veto_selection_steps,
             "muon_double_veto_selection": double_veto_selection_steps,
         }
@@ -165,7 +174,9 @@ def muon_selection(
     produces={
         f"Electron.{var}" for var in [
             "rawIdx", "decayMode", "IPsig", "isolation",
-            "decayModeHPS", "SVx", "SVy", "SVz",
+            "decayModeHPS",
+            "SVx", "SVy", "SVz",
+            "SVcovxx", "SVcovxy", "SVcovxz", "SVcovyy", "SVcovyz", "SVcovzz",
         ]
     },
     exposed=False,
@@ -194,6 +205,14 @@ def electron_selection(
     events = set_ak_column(events, "Electron.SVy", 0.0)
     events = set_ak_column(events, "Electron.SVz", 0.0)
 
+    events = set_ak_column(events, "Electron.SVcovxx", 0.0)
+    events = set_ak_column(events, "Electron.SVcovxy", 0.0)
+    events = set_ak_column(events, "Electron.SVcovxz", 0.0)
+    events = set_ak_column(events, "Electron.SVcovyy", 0.0)
+    events = set_ak_column(events, "Electron.SVcovyz", 0.0)
+    events = set_ak_column(events, "Electron.SVcovzz", 0.0)
+
+    
     # pt sorted indices for converting masks to indices
     sorted_indices = ak.argsort(events.Electron.pt, axis=-1, ascending=False)
     electrons = events.Electron[sorted_indices]
@@ -306,13 +325,14 @@ def electron_selection_init(self: Selector, **kwargs) -> None:
 # ------------------------------------------------------------------------------------------------------- #
 @selector(
     uses={
-        "Tau.{pt,eta,phi,dz,idDeepTau2018v2p5VSe,idDeepTau2018v2p5VSmu,idDeepTau2018v2p5VSjet,decayMode,ipLengthSig,hasRefitSV,refitSVx,refitSVy,refitSVz}",
+        "Tau.{pt,eta,phi,dz,idDeepTau2018v2p5VSe,idDeepTau2018v2p5VSmu,idDeepTau2018v2p5VSjet,decayMode,ipLengthSig,hasRefitSV,refitSVx,refitSVy,refitSVz,refitSVcov00,refitSVcov10,refitSVcov20,refitSVcov11,refitSVcov21,refitSVcov22}",
         optional("Tau.genPartFlav")
     },
     produces={
         f"Tau.{var}" for var in [
             "rawIdx", "IPsig", "isolation",
             "SVx", "SVy", "SVz",
+            "SVcovxx", "SVcovxy", "SVcovxz", "SVcovyy", "SVcovyz", "SVcovzz",
         ]
     },
     exposed=False,
@@ -340,6 +360,13 @@ def tau_selection(
     events = set_ak_column(events, "Tau.SVx", ak.nan_to_num(events.Tau.refitSVx, 0.0))
     events = set_ak_column(events, "Tau.SVy", ak.nan_to_num(events.Tau.refitSVy, 0.0))
     events = set_ak_column(events, "Tau.SVz", ak.nan_to_num(events.Tau.refitSVz, 0.0))
+
+    events = set_ak_column(events, "Tau.SVcovxx", ak.nan_to_num(events.Tau.refitSVcov00, 0.0))
+    events = set_ak_column(events, "Tau.SVcovxy", ak.nan_to_num(events.Tau.refitSVcov10, 0.0))
+    events = set_ak_column(events, "Tau.SVcovxz", ak.nan_to_num(events.Tau.refitSVcov20, 0.0))
+    events = set_ak_column(events, "Tau.SVcovyy", ak.nan_to_num(events.Tau.refitSVcov11, 0.0))
+    events = set_ak_column(events, "Tau.SVcovyz", ak.nan_to_num(events.Tau.refitSVcov21, 0.0))
+    events = set_ak_column(events, "Tau.SVcovzz", ak.nan_to_num(events.Tau.refitSVcov22, 0.0))
     
     #if "decayModeHPS" not in events.Tau.fields:
     #    events = set_ak_column(events, "Tau.decayModeHPS", events.Tau.decayMode)      # explicitly renaming decayMode to decayModeHPS
@@ -610,170 +637,126 @@ def jet_cleaning(
 def gentau_selection(
         self: Selector,
         events: ak.Array,
-        match: Optional[bool]=True,
+        match: bool = True,
         **kwargs
 ) -> tuple[ak.Array, SelectionResult]:
+    """Select prompt generator taus, their decay products and impact parameters.
+
+    With matching enabled, order taus by their nearest reconstructed candidates
+    within delta-R < 0.5. Preserve the existing channel and decay-mode cuts.
     """
-    Selecting the generator level taus only, no martching here
-    select the gen tau decay products as well
-    
-    References:
-      - 
-    """
-    
     genpart_indices = ak.local_index(events.GenPart.pt)
     events = set_ak_column(events, "GenPart.rawIdx", genpart_indices)
 
     _mother_pid = 25 # Higgs
     if self.dataset_inst.has_tag("is_dy"):
         _mother_pid = 23 # Z
-    
-    # masks to select gen tau+ and tau-    
+
+    # Preserve the existing ancestry definition; compute its lookup only once.
+    ancestor = events.GenPart[events.GenPart.distinctParent.genPartIdxMother]
+
+    # masks to select gen tau+ and tau-
     good_selections = {
         "genpart_pdgId"           : np.abs(events.GenPart.pdgId) == 15,
-        #"genpart_status"          : events.GenPart.status == 2,
         "genpart_status_flags"    : events.GenPart.hasFlags(["isPrompt", "isFirstCopy"]),
-        "genpart_pt_10"           : events.GenPart.pt > 5.0, # CHANGE 10.0
-        "genpart_eta_2p5"         : np.abs(events.GenPart.eta) < 3.0, # CHANGE 2.5
-        "genpart_momid_25"        : events.GenPart[events.GenPart.distinctParent.genPartIdxMother].pdgId == _mother_pid,
-        "genpart_mom_status_22"   : events.GenPart[events.GenPart.distinctParent.genPartIdxMother].status == 22,
+        "genpart_pt_10"           : events.GenPart.pt > 5.0,
+        "genpart_eta_2p5"         : np.abs(events.GenPart.eta) < 3.0,
+        "genpart_momid_25"        : ancestor.pdgId == _mother_pid,
     }
-    
-    gen_mask  = genpart_indices >= 0
-    good_gen_mask = gen_mask
+
+    good_gen_mask = genpart_indices >= 0
 
     selection_steps = {"genpart_starts_with": good_gen_mask}
-    for cut in good_selections.keys():
-        good_gen_mask = good_gen_mask & ak.fill_none(good_selections[cut], False)
+    for cut, cut_mask in good_selections.items():
+        good_gen_mask = good_gen_mask & ak.fill_none(cut_mask, False)
         selection_steps[cut] = good_gen_mask
 
     gentau_indices = genpart_indices[good_gen_mask]
-    
+
     gentaus = ak.with_name(events.GenPart[gentau_indices], "PtEtaPhiMLorentzVector")
     zcands  = ak.with_name(events.zcand, "PtEtaPhiMLorentzVector")
 
-    # check the matching
-    #matched_gentaus = zcands.nearest(gentaus, threshold=0.8) if match else gentaus # CHANGE 0.5
-    matched_gentaus = zcands.nearest(gentaus, threshold=0.5) if match else gentaus # CHANGE 0.5
+    matched_gentaus = zcands.nearest(gentaus, threshold=0.5) if match else gentaus
+    matched_gentaus = ak.drop_none(matched_gentaus)
+    empty_gentaus = matched_gentaus[:, :0]
 
-    # nearest method can include None if a particle is not matched
-    # so, taking care of the none values before adding it as a new column
-    matched_gentaus_dummy = matched_gentaus[:,:0]
-    """
-    is_none = ak.sum(ak.is_none(matched_gentaus, axis=1), axis=1) > 0
-    #matched_gentaus = ak.where(is_none, gentaus[:,:0], matched_gentaus)
-    matched_gentaus = ak.where(is_none, matched_gentaus_dummy, matched_gentaus) # new
-    """
-    matched_gentaus = ak.drop_none(matched_gentaus) # CHANGE
-    
-    """
-    has_full_match           = ~is_none
-    """
-    #has_two_matched_gentaus  = has_full_match & ak.fill_none(ak.num(matched_gentaus.rawIdx, axis=1) == 2, False)
-    has_two_matched_gentaus = ak.fill_none(ak.num(matched_gentaus.rawIdx, axis=1) == 2, False) # CHANGE
+    has_two_matched_gentaus = ak.fill_none(ak.num(matched_gentaus.rawIdx, axis=1) == 2, False)
     gentaus_of_opposite_sign = ak.fill_none(ak.sum(matched_gentaus.pdgId, axis=1) == 0, False)
+    matched_gentaus = ak.where(
+        has_two_matched_gentaus & gentaus_of_opposite_sign,
+        matched_gentaus,
+        empty_gentaus,
+    )
 
-    # new
-    # filter, again
-    """
-    matched_gentaus = ak.where((has_full_match & has_two_matched_gentaus & gentaus_of_opposite_sign),
-                               matched_gentaus,
-                               matched_gentaus_dummy)
-    """
-    matched_gentaus = ak.where((has_two_matched_gentaus & gentaus_of_opposite_sign),
-                               matched_gentaus,
-                               matched_gentaus_dummy) 
-
-
-    
-    # Get gentau decay products 
+    # Get gentau decay products
     # hack: _apply_global_index [todo: https://github.com/columnflow/columnflow/discussions/430]
     # get decay modes for the GenTaus
     decay_gentau_indices = matched_gentaus.distinctChildrenIdxG
     decay_gentaus = events.GenPart._apply_global_index(decay_gentau_indices)
+    # Remove pre-radiation history copies.
+    decay_gentaus = decay_gentaus[decay_gentaus.status != 746] # noqa
+
     gentaus_dm = getGenTauDecayMode(decay_gentaus)
 
-    mask_genmatchedtaus_1 = ak.fill_none(ak.firsts(((gentaus_dm[:,:1]   == -2)
-                                                    |(gentaus_dm[:,:1]  == -1)
-                                                    |(gentaus_dm[:,:1]  ==  0) 
-                                                    |(gentaus_dm[:,:1]  ==  1)
-                                                    |(gentaus_dm[:,:1]  ==  2)
-                                                    |(gentaus_dm[:,:1]  == 10)
-                                                    |(gentaus_dm[:,:1]  == 11)), axis=1), False) # ele/mu/had
-    mask_genmatchedtaus_2 = ak.fill_none(ak.firsts(((gentaus_dm[:,1:2]  ==  0) 
-                                                    |(gentaus_dm[:,1:2] ==  1)
-                                                    |(gentaus_dm[:,1:2] ==  2)
-                                                    |(gentaus_dm[:,1:2] == 10)
-                                                    |(gentaus_dm[:,1:2] == 11)), axis=1), False) # had only
-
-    mask_genmatchedtaus   = mask_genmatchedtaus_1 & mask_genmatchedtaus_2
+    #from IPython import embed; embed()
+    
+    # First leg: electron, muon or hadron; second leg: hadron only.
+    hadronic_dm = (
+        (gentaus_dm == -2)
+        | (gentaus_dm == -1)
+        | (gentaus_dm == 0)
+        | (gentaus_dm == 1)
+        | (gentaus_dm == 2)
+        | (gentaus_dm == 10)
+        | (gentaus_dm == 11)
+    )
+    mask_genmatchedtaus = (
+        ak.fill_none(ak.firsts(hadronic_dm, axis=1), False)
+        & ak.fill_none(ak.firsts(hadronic_dm[:, 1:2], axis=1), False)
+    )
 
     # check decaymodes
     # make sure that the decay mode of zcand is the same as decay mode of GenTau
     dm_match_evt_mask = ak.num(zcands.decayMode, axis=1) == 2
     if match:
-        has_2         = (ak.num(zcands.decayMode, axis=1) == 2) & (ak.num(gentaus_dm, axis=1) == 2)
+        has_2         = dm_match_evt_mask & (ak.num(gentaus_dm, axis=1) == 2)
         _gentaus_dm   = ak.where(has_2, gentaus_dm, gentaus_dm[:,:0])
         _zcands_dm    = ak.where(has_2, zcands.decayMode, zcands.decayMode[:,:0])
         dm_match_mask = _zcands_dm == _gentaus_dm
         dm_match_evt_mask = ak.sum(dm_match_mask, axis=1) == 2
-    
-    # -- N E W
+
+    # Keep the existing multiplicity-product criterion (this is not a NaN check).
     has_finite_decay_prods = ak.prod(ak.num(decay_gentaus.pdgId, axis=-1), axis=1) > 1
-        
-    matched_gentaus =  ak.where((mask_genmatchedtaus & dm_match_evt_mask & has_finite_decay_prods),
-                                matched_gentaus, matched_gentaus_dummy)
-    decay_gentaus_dummy = decay_gentaus[:,:0]
-    decay_gentaus = ak.where((mask_genmatchedtaus & dm_match_evt_mask & has_finite_decay_prods),
-                             decay_gentaus, decay_gentaus_dummy)
-    gentaus_dm_dummy = gentaus_dm[:,:0]
-    gentaus_dm = ak.where((mask_genmatchedtaus & dm_match_evt_mask & has_finite_decay_prods),
-                          gentaus_dm, gentaus_dm_dummy)
-    # -- N E W
-    
-    
-    # creating a proper array to save it as a new column
-    dummy_decay_gentaus = decay_gentaus[:,:0][:,None]
-    decay_1             = decay_gentaus[:,:1]
-    decay_2             = decay_gentaus[:,1:2]
-    decay_gentaus       = ak.concatenate([decay_1, decay_2], axis=1)
+    valid_decay = mask_genmatchedtaus & dm_match_evt_mask & has_finite_decay_prods
+    matched_gentaus = ak.where(valid_decay, matched_gentaus, empty_gentaus)
+    decay_gentaus = ak.where(valid_decay, decay_gentaus, decay_gentaus[:, :0])
+    gentaus_dm = ak.where(valid_decay, gentaus_dm, gentaus_dm[:, :0])
 
-
-    #from IPython import embed; embed()
-
-
-    
-    # WARNING: Not a smart way to convert ak.Array -> List -> ak.Array
-    # Must use ak.enforce_type: NOT WORKING here, but it was good for zcand selection
-    events = set_ak_column(events, "GenTau",           ak.Array(ak.to_list(matched_gentaus)))
+    # Detach NanoEvents record parameters and pack selected buffers without
+    # materializing every particle as a Python dictionary. Keep numeric dtypes.
+    events = set_ak_column(events, "GenTau", ak.to_packed(ak.without_parameters(matched_gentaus)))
     events = set_ak_column(events, "GenTau.decayMode", gentaus_dm)
-    events = set_ak_column(events, "GenTau.mass",      ak.ones_like(events.GenTau.mass) * 1.777)
-    events = set_ak_column(events, "GenTau.charge",    ak.where(events.GenTau.pdgId > 0,
-                                                                -1, 
-                                                                ak.where(events.GenTau.pdgId < 0, 
-                                                                         1, 
-                                                                         0)))
-    events = set_ak_column(events, "GenTauProd",       ak.Array(ak.to_list(decay_gentaus)))
-    events = set_ak_column(events, "GenTauProd.charge",ak.where(events.GenTauProd.pdgId > 0,
-                                                                -1,
-                                                                ak.where(events.GenTauProd.pdgId < 0,
-                                                                         1, 0)))
+    events = set_ak_column(events, "GenTau.mass", ak.ones_like(events.GenTau.mass) * 1.777)
+    events = set_ak_column(events, "GenTauProd", ak.to_packed(ak.without_parameters(decay_gentaus)))
+    # Preserve the existing PDG-sign convention for both collections.
+    for collection in ("GenTau", "GenTauProd"):
+        pdg_id = events[collection].pdgId
+        charge = ak.where(pdg_id > 0, -1, ak.where(pdg_id < 0, 1, 0))
+        events = set_ak_column(events, f"{collection}.charge", charge)
 
-    is_mu = np.abs(events.GenTauProd.pdgId) == 13
-    is_e  = np.abs(events.GenTauProd.pdgId) == 11
+    abs_pdg_id = abs(events.GenTauProd.pdgId)
+    is_lepton = (abs_pdg_id == 11) | (abs_pdg_id == 13)
+    is_charged_hadron = (
+        (abs_pdg_id == 211)
+        | (abs_pdg_id == 321)
+        | (abs_pdg_id == 323)
+        | (abs_pdg_id == 10321)
+        | (abs_pdg_id == 10211)
+    )
+    is_one_prong = (events.GenTau.decayMode == 0) & is_charged_hadron
+    prod = events.GenTauProd[is_lepton | is_one_prong]
 
-    # new implementation for GenTau : IPx,IPy,IPz
-    # Ref: https://indico.cern.ch/event/1451226/contributions/6253060/attachments/2976341/5239440/Pi_CP_28_11_24.pdf
-
-    is_pi = (np.abs(events.GenTauProd.pdgId) == 211) | (np.abs(events.GenTauProd.pdgId) == 321) | (np.abs(events.GenTauProd.pdgId) == 323) | (np.abs(events.GenTauProd.pdgId) == 10321) | (np.abs(events.GenTauProd.pdgId) == 10211)
-    is_pi_oneprong = (events.GenTau.decayMode == 0) & is_pi # 1-prong
-    prod_e = events.GenTauProd[is_e]
-    prod_mu = events.GenTauProd[is_mu]
-    prod_pi = events.GenTauProd[is_pi_oneprong]
-    prod = events.GenTauProd[is_e | is_mu | is_pi_oneprong]
-    
     ### IMPACT PARAMETER ###
-    # from IPython import embed; embed()
     # Displacement vector L components
     Lx = events.PV.x
     Ly = events.PV.y
@@ -803,7 +786,7 @@ def gentau_selection(
     IPx = ak.firsts(IPx, axis=-1)
     IPy = ak.firsts(IPy, axis=-1)
     IPz = ak.firsts(IPz, axis=-1)
-    # Replace None by -999 
+    # Replace None by -999
     IPx = ak.fill_none(IPx, -999)
     IPy = ak.fill_none(IPy, -999)
     IPz = ak.fill_none(IPz, -999)
@@ -821,11 +804,10 @@ def gentau_selection(
             "gentaus_of_opposite sign" : gentaus_of_opposite_sign,
             "valid_decay_products"     : mask_genmatchedtaus,
             "has_finite_decay_products": has_finite_decay_prods,
-            "gen_DMs_same_as_zcands"   : dm_match_evt_mask, # probably not necessary, will test later
+            "gen_DMs_same_as_zcands"   : dm_match_evt_mask,
         },
         aux = selection_steps,
     )
-
 
 
 # ------------------------------------------------------------------------------------------------------- #

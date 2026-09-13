@@ -65,9 +65,23 @@ def ProduceObservables(
         if run_reg_algo:
             if reg_algo == 'fastMTT':
                 logger.info('Run FastMTT')
-                p4zcand_1_fmtt, p4zcand_2_fmtt = self[apply_fastMTT](events[mask])
+                p4zcand_1_fmtt, p4zcand_2_fmtt = self[apply_fastMTT](events[mask], run_fmtt=True)
+                zcandP4['p4z1'] = p4zcand_1_fmtt
+                zcandP4['p4z2'] = p4zcand_2_fmtt 
+
+            elif reg_algo == 'fastMTT-kinfit':
+                logger.info('Run FastMTT Kinfit')
+                p4zcand_1_fmtt, p4zcand_2_fmtt = self[apply_fastMTT](events[mask], run_fmtt_kinfit=True)
                 zcandP4['p4z1'] = p4zcand_1_fmtt
                 zcandP4['p4z2'] = p4zcand_2_fmtt
+
+            elif reg_algo == 'classic_svfit':
+                logger.info('Run Classic SVfit')
+                p4zcand_1_fmtt, p4zcand_2_fmtt = self[apply_fastMTT](events[mask], run_classic_svfit=True)
+                zcandP4['p4z1'] = p4zcand_1_fmtt
+                zcandP4['p4z2'] = p4zcand_2_fmtt
+                
+                
 
         observable_dict = observable_func(zcandP4, leg1, leg2) # get_observables_mutau
         observable_dict = unwrap(observable_dict, count, debug=False)
@@ -143,17 +157,18 @@ def ProduceObservables(
         observables = copy.deepcopy(dummy_observables)
         
         mask_mu_pi     = is_pi(p4z2)
-        mask_mu_rho    = (is_rho(p4z2)  | is_a1DM2(p4z2))
-        mask_mu_a1     = (is_a1DM10(p4z2) | is_a1DM11(p4z2))
+        #mask_mu_rho    = (is_rho(p4z2)  | is_a1DM2(p4z2))
+        #mask_mu_a1     = (is_a1DM10(p4z2) | is_a1DM11(p4z2))
+        mask_mu_rho    = is_rho(p4z2)
+        mask_mu_a1     = is_a1DM10(p4z2)
 
-
-        #from IPython import embed; embed()
-        
 
         # mu-pi
         logger.info('mu-pi')
+        #observables = extract_observables(observables, p4zcandinfo, mask_mu_pi, 'mu', 'pi', get_observables_mutau, keylist=['p4z2'],
+        #                                  reg_algo='fastMTT')
         observables = extract_observables(observables, p4zcandinfo, mask_mu_pi, 'mu', 'pi', get_observables_mutau, keylist=['p4z2'],
-                                          reg_algo='fastMTT')
+                                          reg_algo='classic_svfit')
 
         #from IPython import embed; embed()
         
@@ -166,7 +181,9 @@ def ProduceObservables(
         # mu-a1
         logger.info('mu-a1')
         observables = extract_observables(observables, p4zcandinfo, mask_mu_a1, 'mu', 'a1', get_observables_mutau, keylist=['p4z2'],
-                                          reg_algo='fastMTT')
+                                          reg_algo='fastMTT-kinfit')
+        #observables = extract_observables(observables, p4zcandinfo, mask_mu_a1, 'mu', 'a1', get_observables_mutau, keylist=['p4z2'],
+        #                                  reg_algo='classic_svfit')
 
         #from IPython import embed; embed()
         
@@ -241,8 +258,8 @@ def ProduceRecoObservables(
 
     logger.info("Reco level")
     
-    #events, observables = self[ProduceObservables](events, p4zcandinfo, run_reg_algo=True)
-    events, observables = self[ProduceObservables](events, p4zcandinfo, run_reg_algo=False)
+    events, observables = self[ProduceObservables](events, p4zcandinfo, run_reg_algo=True)
+    #events, observables = self[ProduceObservables](events, p4zcandinfo, run_reg_algo=False)
 
     vars = getlistofobservables()
     for var in vars:

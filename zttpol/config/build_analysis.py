@@ -11,7 +11,8 @@ from cmsdb.campaigns.run2_2018_taupol_nano_v15 import campaign_run2_2018_taupol_
 
 def get_cfg_type_from_cmd(luigi_parser, law_parser):
     parsed_args, _  = law_parser.parse_known_args(luigi_parser.cmdline_args)
-    cfg_name_in_cmd = parsed_args.config
+    root_task = parsed_args.root_task
+    cfg_name_in_cmd = parsed_args.configs if 'PlotVariables' in root_task else parsed_args.config
     islimited = True if cfg_name_in_cmd.endswith('_limited') else False
     isfull = False if islimited else True
     return islimited, isfull

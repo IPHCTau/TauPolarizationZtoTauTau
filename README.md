@@ -2,6 +2,13 @@
 
 Analysis is now moved from CERN lxplus to IPHC UI --> So, CERN HTCondor to IPHC Slurm
 
+## IMPORTANT:
+ - `remote.py` is now merged to `columnflow` [PR #820](https://github.com/columnflow/columnflow/pull/820)
+ - `job.py` in `law` is pending [PR #212](https://github.com/riga/law/pull/212)
+If the later is merged to law, columnflow with updated law submodule can be pulled safely, and copying these two files won't be neecessary.
+
+
+
 ## Resources
 
  - `columnflow` : [origin](https://github.com/IPHCTau/columnflow/tree/865e970d4a20b87b9020687a616be9cc3dbb879b) -- [upstream](https://github.com/columnflow/columnflow/)

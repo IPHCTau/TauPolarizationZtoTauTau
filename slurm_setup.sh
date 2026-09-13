@@ -4,6 +4,10 @@
 #   source slurm_setup.sh
 # Run this script from a fresh shell in the analysis repository.
 
+GCC_LIBDIR=/cvmfs/cms.cern.ch/el9_amd64_gcc13/external/gcc/13.4.0-6908cfdf803923e783448096ca4f0923/lib64
+TBB_LIBDIR=/cvmfs/cms.cern.ch/el9_amd64_gcc13/external/tbb/v2022.3.0-88eb7be4ee320d604a798a914aea6359/lib
+export LD_LIBRARY_PATH="$GCC_LIBDIR:$TBB_LIBDIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
 # Use a locale available on IPHC login and worker nodes.
 unset LANGUAGE LC_ALL LC_CTYPE
 export LANG=C.utf8
