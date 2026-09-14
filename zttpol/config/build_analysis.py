@@ -10,11 +10,23 @@ from cmsdb.campaigns.run2_2018_taupol_nano_v15 import campaign_run2_2018_taupol_
 #from cmsdb.campaigns.run3_2023_postBPix_nano_cp_tau_v14_nanoprod_2024_v2 import campaign_run3_2023_postBPix_nano_cp_tau_v14_nanoprod_2024_v2
 
 def get_cfg_type_from_cmd(luigi_parser, law_parser):
-    parsed_args, _  = law_parser.parse_known_args(luigi_parser.cmdline_args)
-    root_task = parsed_args.root_task
-    cfg_name_in_cmd = parsed_args.configs if 'PlotVariables' in root_task else parsed_args.config
-    islimited = True if cfg_name_in_cmd.endswith('_limited') else False
-    isfull = False if islimited else True
+    parsed_args, _ = law_parser.parse_known_args(
+        luigi_parser.cmdline_args
+    )
+
+    cfg_name_in_cmd = getattr(parsed_args, "config", None)
+
+    if cfg_name_in_cmd is None:
+        cfg_name_in_cmd = getattr(parsed_args, "configs", None)
+
+    if isinstance(cfg_name_in_cmd, str):
+        cfg_names = [cfg_name_in_cmd]
+    else:
+        cfg_names = cfg_name_in_cmd
+
+    islimited = any(cfg.endswith("_limited") for cfg in cfg_names)
+    isfull = not islimited
+
     return islimited, isfull
 
 
