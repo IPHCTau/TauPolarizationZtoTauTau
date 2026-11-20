@@ -143,11 +143,14 @@ def build_abcd_masks(
     is_iso_1_dummy = z1.rawIdx < 0
     is_iso_1 = ak.where(events.channel_id == ch_tautau.id,
                         ak.values_astype(z1.isolation, np.int32) >= self.config_inst.x.tauIDWPs["DeepTau2018v2p5"].vs_j[vs_jet_wp(ch_tautau.name)],
-                        ak.where(((events.channel_id == ch_mutau.id) | (events.channel_id == ch_mumu.id) | (events.channel_id == ch_emu.id)),
+                        ak.where(((events.channel_id == ch_mutau.id) | (events.channel_id == ch_mumu.id)),
                                  z1.isolation <= 0.15,
                                  ak.where(((events.channel_id == ch_etau.id) | (events.channel_id == ch_ee.id)),
                                           z1.isolation <= 0.3,
-                                          is_iso_1_dummy)
+                                          ak.where((events.channel_id == ch_emu.id),
+                                                    z1.isolation <= 0.2,
+                                                    is_iso_1_dummy)
+                                          )
                                  )
                         )
     is_iso_1 = ak.fill_none(ak.any(is_iso_1, axis=1), False)
