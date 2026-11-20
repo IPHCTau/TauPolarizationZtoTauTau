@@ -22,9 +22,9 @@ from zttpol.production.ProduceObservables import ProduceRecoObservables, Produce
 from zttpol.production.weights import (
     muon_id_weights,
     muon_iso_weights,
-    muon_trigger_weights,
     electron_id_weights,
     electron_reco_weights,
+    emu_xtrigger_weights,
 )
 
 from zttpol.util import (
@@ -69,6 +69,7 @@ logger = law.logger.get_logger(__name__)
         "Electron.{pt,eta,phi,mass}",
         electron_id_weights,
         electron_reco_weights,
+        emu_xtrigger_weights
     },
     produces={
         produce_base,
@@ -78,6 +79,7 @@ logger = law.logger.get_logger(__name__)
         # -- electron -- #
         electron_id_weights,
         electron_reco_weights,
+        emu_xtrigger_weights
     },
 )
 def produce_emu(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
@@ -91,6 +93,7 @@ def produce_emu(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = self[muon_iso_weights](events, **kwargs)
         events = self[electron_id_weights](events, **kwargs)
         events = self[electron_reco_weights](events, **kwargs)
+        events = self[emu_xtrigger_weights](events, **kwargs)
 
     #events = self[ff_weight](events, **kwargs)        
     

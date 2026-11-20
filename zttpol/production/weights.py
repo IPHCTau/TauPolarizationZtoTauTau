@@ -22,7 +22,7 @@ from columnflow.production.cms.pdf import pdf_weights
 from columnflow.production.cms.scale import murmuf_weights
 from columnflow.production.cms.parton_shower import ps_weights
 
-from columnflow.util import maybe_import, safe_div
+from columnflow.util import maybe_import, safe_div, load_correction_set
 from columnflow.columnar_util import set_ak_column
 from columnflow.types import Any
 
@@ -206,6 +206,121 @@ def muon_trigger_weights(self: Producer,
 
     return events
 """
+
+# ----------------------------------------------------- #
+#              Electron-Muon Trigger Weight             #
+# ----------------------------------------------------- #
+
+@producer(
+    uses={
+        "Muon.{pt,eta,phi,mass}", "Electron.{pt,eta,phi,mass}",
+        "cross_e_mu_triggered",
+    },
+    # produces defined in init
+    mc_only=True,
+    get_file=(lambda self, external_files: external_files.emu_xtrig_eff),
+    get_sf_config=(lambda self: self.config_inst.x.emu_xtrig_sf),
+)
+def emu_xtrigger_weights(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+
+    LEGS = ("mu8", "mu23", "el12", "el23")
+
+    mu_pt, mu_eta = events.Muon.pt, abs(events.Muon.eta)
+    el_pt, el_eta = events.Electron.pt, abs(events.Electron.eta)
+
+    emu = events.cross_e_mu_triggered
+
+    # kinematics of the selected events only
+    kin = {
+        "mu8": (mu_pt[emu], mu_eta[emu]), "mu23": (mu_pt[emu], mu_eta[emu]),
+        "el12": (el_pt[emu], el_eta[emu]), "el23": (el_pt[emu], el_eta[emu]),
+    }
+
+    # per-leg efficiency
+    def leg_eff(leg, sample, syst):
+        pt_jagged, eta_jagged = kin[leg]
+        counts = ak.num(pt_jagged)
+        pt_flat = ak.flatten(pt_jagged)
+        eta_flat = ak.flatten(eta_jagged)
+        corr = self.correctors[leg][sample]
+        eff = ak.unflatten(
+            corr.evaluate(syst, pt_flat, eta_flat),
+            counts=counts,
+        )
+        return eff
+
+    effs = {
+        (leg, sample, syst): leg_eff(leg, sample, syst)
+        for leg in LEGS for sample in ("data", "mc") for syst in ("nominal", "systup", "systdown")
+    }
+
+    # OR of Mu23_Ele12 and Mu8_Ele23; `shift` replaces one efficiency by its variation
+    def sf_value(shift=None):
+        def or_eff(sample):
+            e = {leg: effs[(leg, sample, "nominal")] for leg in LEGS}
+            if shift is not None and shift[1] == sample:
+                e[shift[0]] = effs[shift]
+            return e["mu23"] * e["el12"] + e["mu8"] * e["el23"] - e["mu23"] * e["el23"]
+
+        data, mc = or_eff("data"), or_eff("mc")
+        return ak.where(mc > 0, data / mc, ak.ones_like(data))
+
+    nom = sf_value()
+
+    # 8 independent sources (4 legs x data/MC), added in quadrature
+    up_sq, down_sq = ak.zeros_like(nom), ak.zeros_like(nom)
+    for leg in LEGS:
+        for sample in ("data", "mc"):
+            plus, minus = sf_value((leg, sample, "systup")), sf_value((leg, sample, "systdown"))
+            up_sq = up_sq + np.maximum(np.maximum(plus, minus) - nom, 0.0) ** 2
+            down_sq = down_sq + np.maximum(nom - np.minimum(plus, minus), 0.0) ** 2
+
+    sf_up = nom + np.sqrt(up_sq)
+    sf_down = ak.where((nom - np.sqrt(down_sq) > 0), nom - np.sqrt(down_sq), 0.0)
+
+    weights = {"": nom, "_up": sf_up, "_down": sf_down}
+
+    for postfix in ["", "_up", "_down"]:
+        events = set_ak_column_f32(events, f"trigger_weight{postfix}", weights[postfix])
+
+    return events
+
+
+@emu_xtrigger_weights.init
+def emu_xtrigger_weights_init(self: Producer, **kwargs) -> None:
+    super(emu_xtrigger_weights, self).init_func(**kwargs)
+
+    # add the product of nominal and up/down variations to produced columns
+    self.produces.add("trigger_weight")
+    self.produces.add("trigger_weight_up")
+    self.produces.add("trigger_weight_down")
+
+
+@emu_xtrigger_weights.requires
+def emu_xtrigger_weights_requires(self: Producer, task: law.Task, reqs: dict, **kwargs) -> None:
+    super(emu_xtrigger_weights, self).requires_func(task=task, reqs=reqs, **kwargs)
+    if "external_files" in reqs:
+        return
+    from columnflow.tasks.external import BundleExternalFiles
+    reqs["external_files"] = BundleExternalFiles.req(task)
+
+
+@emu_xtrigger_weights.setup
+def emu_xtrigger_weights_setup(
+    self: Producer, task: law.Task, reqs: dict, inputs: dict,
+    reader_targets: law.util.InsertableDict, **kwargs,
+) -> None:
+    super(emu_xtrigger_weights, self).setup_func(
+        task=task, reqs=reqs, inputs=inputs, reader_targets=reader_targets, **kwargs,
+    )
+    bundle = reqs["external_files"]
+    correction_set = load_correction_set(self.get_file(bundle.files))
+
+    self.sf_config = self.get_sf_config()
+    self.correctors = {
+        leg: {sample: correction_set[name] for sample, name in samples.items()}
+        for leg, samples in self.sf_config["correctors"].items()
+    }
 
 # ------------------------------------- #
 #              TauID Weight             #

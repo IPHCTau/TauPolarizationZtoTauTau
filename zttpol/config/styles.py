@@ -150,7 +150,7 @@ def stylize_processes(config: od.Config) -> None:
         'dy_2e_or_2mu_m50toinf_nj'          : [cfg.x.colors.blue,   r"$Z \to e^+e^-/\mu^+\mu^-$"], # because tautau is vetoed from gen-level
         'dy_2tau_m50toinf_nj_LHEspin_minus' : [cfg.x.colors.yellow, r"$Z \to \tau_L^- \tau_R^+$"],
         'dy_2tau_m50toinf_nj_LHEspin_plus'  : [cfg.x.colors.red,    r"$Z \to \tau_R^- \tau_L^+$"],
-        'dy_2tau'                           : [cfg.x.colors.yellow, r"$Z \to \tau^+\tau^-$"],
+        'dy_2tau_m50toinf_nj'               : [cfg.x.colors.yellow, r"$Z \to \tau^+\tau^-$"],
         'tt'                                : [cfg.x.colors.grey,   r"$t\bar{t}$"],
         'st'                                : [cfg.x.colors.purple, r"$st(\bar{t})(W)$"],
         'top'                               : [cfg.x.colors.grey,   r"$t\bar{t} + st(\bar{t})(W)$"],

@@ -7,6 +7,7 @@ import luigi
 import law
 import order as od
 from scinum import Number
+from columnflow.util import DotDict
 
 # ------------------------ #
 # The main analysis object #
@@ -41,6 +42,12 @@ ana.x.cmssw_sandboxes = [
 ana.x.config_groups = {}
 
 logger = law.logger.get_logger(__name__) 
+
+ana.x.hist_hooks = DotDict()
+# qcd estimation
+from zttpol.hist_hooks.qcd import add_hooks as add_qcd_hooks
+add_qcd_hooks(ana)
+
 
 # ------------- #
 # setup configs #

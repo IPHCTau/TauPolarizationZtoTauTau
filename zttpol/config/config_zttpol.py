@@ -104,8 +104,28 @@ def add_config (ana: od.Analysis,
 
     # combination of processes
     cfg.add_process(
-        name="multiboson",
+        name="diboson",
         id=dummy_proc_id + 1,
+        label="VV",
+        processes=[procs.n.ww_dl, procs.n.ww_sl,
+                   procs.n.wz_wlnu_zll, procs.n.wz_wqq_zll, procs.n.wz_wlnu_zqq,
+                   procs.n.zz_zqq_zll, procs.n.zz_zll_znunu, procs.n.zz_zll_zll,],
+    )
+    cfg.add_process(
+        name="triboson",
+        id=dummy_proc_id + 2,
+        label="VVV",
+        processes=[procs.n.www, procs.n.wwz, procs.n.wzz, procs.n.zzz],
+    )
+    cfg.add_process(
+        name="ewk_w",
+        id=dummy_proc_id + 3,
+        label="EWK_W",
+        processes=[procs.n.ewk_wp_lnu_m50toinf, procs.n.ewk_wm_lnu_m50toinf],
+    )
+    cfg.add_process(
+        name="multiboson",
+        id=dummy_proc_id + 11,
         label="VV(V)",
         processes=[procs.n.ww_dl, procs.n.ww_sl,
                    procs.n.wz_wlnu_zll, procs.n.wz_wqq_zll, procs.n.wz_wlnu_zqq,
@@ -115,14 +135,14 @@ def add_config (ana: od.Analysis,
     )
     cfg.add_process(
         name="top",
-        id=dummy_proc_id + 11, 
+        id=dummy_proc_id + 21, 
         label="top",
         processes=[procs.n.tt,
                    procs.n.st],
     )
     cfg.add_process(
         name="higgs",
-        id=dummy_proc_id + 21, 
+        id=dummy_proc_id + 31, 
         label="higgs",
         processes=[procs.n.h_ggf_htt,
                    procs.n.zh_htt,
@@ -1262,6 +1282,19 @@ def add_config (ana: od.Analysis,
         logger.info(f"EleHLT JSON : {eletrigsf[0]}")
         add_external("electron_trig_sf", eletrigsf)
 
+    # emu TRG SF
+    emuTRG = {
+        '2018'         : (f"{corrdir}/EMU/Run2-2018-UL-emu_xtrig_eff.json.gz", "v1"),
+        '2022PreEE'    : (f"{corrdir}/EMU/Run2-2018-UL-emu_xtrig_eff.json.gz", "v1"),
+        '2022PostEE'   : (f"{corrdir}/EMU/Run2-2018-UL-emu_xtrig_eff.json.gz", "v1"),
+        '2023PreBPix'  : (f"{corrdir}/EMU/Run2-2018-UL-emu_xtrig_eff.json.gz", "v1"),
+        '2023PostBPix' : (f"{corrdir}/EMU/Run2-2018-UL-emu_xtrig_eff.json.gz", "v1"),
+        '2024'         : (f"{corrdir}/EMU/Run2-2018-UL-emu_xtrig_eff.json.gz", "v1")
+    }[f'{year}{postfix}']
+
+    logger.info(f"Emu TRG JSON : {emuTRG[0]}")
+    add_external("emu_xtrig_eff", emuTRG)
+
     # tauID SF + TES + TriggerSF
     tauSF = {
         '2018'         : (f"{corrdir}/TAU/Run2-2018-UL-NanoAODv15/latest/tau.json.gz", "v1"),
@@ -1552,6 +1585,13 @@ def add_config (ana: od.Analysis,
         f"{year}_{postfix}"
     )
     """
+
+    cfg.x.emu_xtrig_sf = {
+    "correctors": {
+        leg: {"data": f"{leg}_data_eff", "mc": f"{leg}_mc_eff"}
+        for leg in ["mu8", "mu23", "el12", "el23"]
+    },
+}
 
     
     ################################################################################################
@@ -1867,20 +1907,19 @@ def add_config (ana: od.Analysis,
 
 
 
-    # --- >>> tau weight <<< --- #
-    if channel not in {'emu'}:
-        cfg.x.trigger_legs = {
-            'ee'    : ['e'],
-            'etau'  : ['e','tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
-            #'emu'   : ['emu'],
-            'mumu'  : ['mu'],
-            'mutau' : ['mu','tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
-            'tautau': ['tau_dm0','tau_dm1','tau_dm10','tau_dm11','jet'] if run == 3 else ['tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
-        }[channel]
-        for i, leg in enumerate(cfg.x.trigger_legs):
-            cfg.add_shift(name=f"trigger_{leg}_up", id=201 + 2 * i, type="shape")
-            cfg.add_shift(name=f"trigger_{leg}_down", id=202 + 2 * i, type="shape")
-            add_shift_aliases(cfg, f"trigger_{leg}", {"trigger_weight": f"trigger_weight_{leg}_{{direction}}"})
+    # --- >>> trigger weight <<< --- #
+    cfg.x.trigger_legs = {
+        'ee'    : ['e'],
+        'etau'  : ['e','tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
+        'emu'   : ['emu'],
+        'mumu'  : ['mu'],
+        'mutau' : ['mu','tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
+        'tautau': ['tau_dm0','tau_dm1','tau_dm10','tau_dm11','jet'] if run == 3 else ['tau_dm0','tau_dm1','tau_dm10','tau_dm11'],
+    }[channel]
+    for i, leg in enumerate(cfg.x.trigger_legs):
+        cfg.add_shift(name=f"trigger_{leg}_up", id=201 + 2 * i, type="shape")
+        cfg.add_shift(name=f"trigger_{leg}_down", id=202 + 2 * i, type="shape")
+        add_shift_aliases(cfg, f"trigger_{leg}", {"trigger_weight": f"trigger_weight_{leg}_{{direction}}"})
 
     
 
@@ -1900,7 +1939,7 @@ def add_config (ana: od.Analysis,
     cfg.x.event_weights = DotDict({
         "normalization_weight"           : [],
         "normalized_pu_weight"           : get_shifts("minbias_xs"),
-        #"trigger_weight"                 : get_shifts(*(f"trigger_{leg}" for leg in cfg.x.trigger_legs)),
+        "trigger_weight"                 : get_shifts(*(f"trigger_{leg}" for leg in cfg.x.trigger_legs)),
         #"ff_weight"                             : [],
         ##"ff_cls_corr_weight"                    : [],
         ###"ff_ext_corr_weight"                    : [],
@@ -1922,9 +1961,9 @@ def add_config (ana: od.Analysis,
         cfg.x.event_weights["tau_id_weight"] = get_shifts(*(f"tau_{unc}" for unc in cfg.x.tau_unc_names))
         #cfg.x.event_weights["tau_trigger_weight"] = get_shifts("tau_trig")
 
-    logger.warning("for emu channel, trigger weights aren't applied yet")
+    """ logger.warning("for emu channel, trigger weights aren't applied yet")
     if channel not in {'emu'}:
-        cfg.x.event_weights["trigger_weight"] = get_shifts(*(f"trigger_{leg}" for leg in cfg.x.trigger_legs))
+        cfg.x.event_weights["trigger_weight"] = get_shifts(*(f"trigger_{leg}" for leg in cfg.x.trigger_legs)) """
         
         
     """
@@ -2091,14 +2130,14 @@ def add_config (ana: od.Analysis,
 
                 iphc_base_path = (
                     "/store/user/alebihan/"
-                    "taupola_noskim_prod_63M/"
+                    "taupola_noskim_63M_lxplus_bis/"
                     "Run2_2018"
                 )
-                #iphc_base_path = (
-                #    "/store/user/alebihan/"
-                #    "taupola_noskim/"
-                #    "Run2_2018"
-                #)
+                """ iphc_base_path = (
+                   "/store/user/alebihan/"
+                   "taupola_noskim/"
+                   "Run2_2018"
+                ) """
 
                 dataset_path = f"{iphc_base_path}/{dataset_key.lstrip('/')}"
 
@@ -2279,3 +2318,27 @@ def add_config (ana: od.Analysis,
         "ee"     : False,
         "mumu"   : False,
     })
+
+    cfg.x.QCD_REGION_NAMES = {
+        "mutau": {
+            "os_iso":    "SR",
+            "os_noniso": "AR",
+            "ss_iso":    "QCD_DRnum",
+            "ss_noniso": "QCD_DRden",
+	    },
+        "etau": {
+            "os_iso":    "SR",
+            "os_noniso": "AR",
+            "ss_iso":    "QCD_DRnum",
+            "ss_noniso": "QCD_DRden",
+        },
+        "tautau": {},
+        "emu": {
+            "os_iso": "D",
+            "ss_iso": "C",
+            "os_noniso": "A",
+            "ss_noniso": "B",
+        },
+        "ee": {},
+        "mumu": {},
+    }[channel]

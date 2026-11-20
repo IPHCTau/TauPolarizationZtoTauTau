@@ -27,12 +27,12 @@ logger = law.logger.get_logger(__name__)
 # the four regions to be represented by adjacent ``os/ss`` and
 # ``iso/noniso`` category components. This analysis instead uses one combined
 # component per region.
-QCD_REGION_NAMES = {
-    "os_iso": "SR",
-    "ss_iso": "AR",
-    "os_noniso": "DRnum",
-    "ss_noniso": "DRden",
-}
+#QCD_REGION_NAMES = {
+#    "os_iso":    "SR",
+#    "os_noniso": "AR",
+#    "ss_iso":    "QCD_DRnum",
+#    "ss_noniso": "QCD_DRden",
+#}
 
 
 def get_qcd_group(cat_inst: od.Category) -> str:
@@ -45,7 +45,7 @@ def get_qcd_group(cat_inst: od.Category) -> str:
     return qcd_group
 
 
-def replace_qcd_region(category_name: str, region_key: str) -> str:
+def replace_qcd_region(category_name: str, region_key: str, QCD_REGION_NAMES: dict) -> str:
     """Replace SR/AR/DRnum/DRden in a combined category name."""
     if region_key not in QCD_REGION_NAMES:
         raise ValueError(f"unknown QCD region key '{region_key}'")
@@ -121,6 +121,8 @@ def add_hooks(analysis_inst: od.Analysis) -> None:
         import numpy as np
         import hist
 
+        QCD_REGION_NAMES = config_inst.x.QCD_REGION_NAMES
+        
         if variance_strategy not in (known_variance_strategies := {"mc_data", "mc", "data", "none"}):
             raise ValueError(
                 f"unknown variance strategy '{variance_strategy}', known strategies are: "
@@ -150,9 +152,10 @@ def add_hooks(analysis_inst: od.Analysis) -> None:
             # get the category axis
             cat_ax = h.axes["category"]
             category_names.update(list(cat_ax))
-
+        
         def get_region_key(cat_inst: od.Category) -> str | None:
             """Return the ABCD region represented by a category's tags."""
+            """
             if cat_inst.has_tag({"os", "iso"}, mode=all):
                 return "os_iso"
             if cat_inst.has_tag({"os", "noniso"}, mode=all):
@@ -162,7 +165,26 @@ def add_hooks(analysis_inst: od.Analysis) -> None:
             if cat_inst.has_tag({"ss", "noniso"}, mode=all):
                 return "ss_noniso"
             return None
+            """
+            category_parts = set(cat_inst.name.split("__"))
 
+            matches = [
+                region_key
+                for region_key, region_name in QCD_REGION_NAMES.items()
+                if region_name in category_parts
+            ]
+
+            if not matches:
+                return None
+
+            if len(matches) > 1:
+                raise ValueError(
+                    f"category '{cat_inst.name}' matches multiple QCD regions: "
+                    f"{matches}"
+                )
+
+            return matches[0]
+            
         # get ABCD categories corresponding to the requested category
         requested_group = None
         requested_region = None
@@ -193,17 +215,17 @@ def add_hooks(analysis_inst: od.Analysis) -> None:
                 cat_inst_req.os_iso = find_cat(requested_category, {"os", "iso"})
                 requested_group = get_qcd_group(cat_inst_req.os_iso)
                 cat_inst_req.ss_iso = find_cat(
-                    replace_qcd_region(requested_category, "ss_iso"),
+                    replace_qcd_region(requested_category, "ss_iso", QCD_REGION_NAMES),
                     {"ss", "iso"},
                     requested_group,
                 )
                 cat_inst_req.os_noniso = find_cat(
-                    replace_qcd_region(requested_category, "os_noniso"),
+                    replace_qcd_region(requested_category, "os_noniso", QCD_REGION_NAMES),
                     {"os", "noniso"},
                     requested_group,
                 )
                 cat_inst_req.ss_noniso = find_cat(
-                    replace_qcd_region(requested_category, "ss_noniso"),
+                    replace_qcd_region(requested_category, "ss_noniso", QCD_REGION_NAMES),
                     {"ss", "noniso"},
                     requested_group,
                 )
@@ -544,6 +566,7 @@ def add_hooks(analysis_inst: od.Analysis) -> None:
     # add different hook variations
     analysis_inst.x.hist_hooks.qcd = qcd_estimation
     analysis_inst.x.hist_hooks.qcd_zerofill = functools.partial(qcd_estimation, empty_bin_value=1e-5)
+    analysis_inst.x.hist_hooks.qcd_from_os_noniso = functools.partial(qcd_estimation, shape_transfer="from_os_noniso")    
     analysis_inst.x.hist_hooks.qcd_from_ss_iso = functools.partial(qcd_estimation, shape_transfer="from_ss_iso")
     analysis_inst.x.hist_hooks.qcd_raw = functools.partial(
         qcd_estimation,
